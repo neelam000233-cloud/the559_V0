@@ -1,4 +1,4 @@
-import type { AbilityKey, AIDifficulty, Abilities, EffectsIntensity } from "./types"
+import type { AbilityKey, AIDifficulty, Abilities, EffectsIntensity, FeintVariant } from "./types"
 
 export const MATCH_DURATION_MS = 3 * 60 * 1000
 
@@ -35,6 +35,33 @@ export const SHAKE_MAGNITUDE: Record<EffectsIntensity, number> = {
 
 /** Tremor starts once the player's SAN drops below this value and grows as SAN falls. */
 export const SHAKE_SAN_THRESHOLD = 40
+
+export const FEINT_VARIANTS: FeintVariant[] = [
+  "pump",
+  "double-pump",
+  "sidestep-left",
+  "sidestep-right",
+  "overhead",
+  "crouch-spring",
+]
+
+export const FEINT_DURATION_MS: Record<FeintVariant, number> = {
+  pump: 380,
+  "double-pump": 580,
+  "sidestep-left": 460,
+  "sidestep-right": 460,
+  overhead: 540,
+  "crouch-spring": 520,
+}
+
+/** Gap after a feint ends before another one can start. */
+export const FEINT_RECOVERY_MS = 260
+
+/** How strongly the camera chases a feint (fraction of the document's feint offset). */
+export const FEINT_CAMERA_FOLLOW: Record<EffectsIntensity, number> = {
+  strong: 0.55,
+  weak: 0.25,
+}
 
 export const TOTAL_ABILITY_POINTS = 10
 export const ABILITY_KEYS: AbilityKey[] = [

@@ -6,6 +6,10 @@ import * as THREE from "three"
 import { Outlines } from "@react-three/drei"
 import { getToonGradientMap, OUTLINE_COLOR } from "@/lib/three-toon"
 import type { CharacterFlash, CharacterPose } from "@/lib/game/character-action"
+import { feintMotion, ZERO_FEINT_MOTION, type FeintMotion } from "@/lib/game/feint-motion"
+import type { FeintVariant } from "@/lib/game/types"
+
+const FEINT_KEYS = Object.keys(ZERO_FEINT_MOTION) as (keyof FeintMotion)[]
 
 /** A single low-poly body part: toon-shaded solid + thick inflated-hull outline. */
 function ToonPart({
@@ -61,7 +65,8 @@ const POSE_TARGETS: Record<
   "idle-wait": { armPitch: 1.3, armSpread: 0.05, torsoLean: 0.03, headTilt: 0 },
   "guard-parry": { armPitch: 0.55, armSpread: 0.32, torsoLean: -0.09, headTilt: -0.05 },
   "guard-block": { armPitch: 0.85, armSpread: 0.22, torsoLean: 0.14, headTilt: 0.06 },
-  feint: { armPitch: 0.35, armSpread: 0.4, torsoLean: -0.14, headTilt: -0.08 },
+  // Feints are driven by additive per-variant curves (see feint-motion.ts), so the base stays at the hold pose.
+  feint: { armPitch: 1.05, armSpread: 0.12, torsoLean: 0, headTilt: 0 },
 }
 
 interface CharacterProps {
@@ -76,6 +81,8 @@ interface CharacterProps {
   flash?: CharacterFlash
   /** Changes whenever a new flash should retrigger (engine timestamp of the event). */
   flashKey?: number
+  feintVariant?: FeintVariant | null
+  feintProgress?: number | null
 }
 
 export function CharacterLowPoly({
@@ -88,6 +95,8 @@ export function CharacterLowPoly({
   pose = "idle-hold",
   flash = null,
   flashKey = 0,
+  feintVariant = null,
+  feintProgress = null,
 }: CharacterProps) {
   const rotY = facing === 1 ? 0 : Math.PI
 
@@ -96,6 +105,8 @@ export function CharacterLowPoly({
   const leftArmRef = useRef<THREE.Group>(null)
   const rightArmRef = useRef<THREE.Group>(null)
   const lungeRef = useRef<THREE.Group>(null)
+  const upperBodyRef = useRef<THREE.Group>(null)
+  const feintRef = useRef<FeintMotion>({ ...ZERO_FEINT_MOTION })
 
   const poseRef = useRef({ armPitch: 1.05, armSpread: 0.12, torsoLean: 0, headTilt: 0 })
   const flashElapsedRef = useRef(FLASH_DURATION_MS)
@@ -119,25 +130,35 @@ export function CharacterLowPoly({
     poseRef.current.torsoLean += (target.torsoLean - poseRef.current.torsoLean) * k
     poseRef.current.headTilt += (target.headTilt - poseRef.current.headTilt) * k
 
-    if (leftArmRef.current) leftArmRef.current.rotation.set(poseRef.current.armPitch, 0, poseRef.current.armSpread)
-    if (rightArmRef.current) rightArmRef.current.rotation.set(poseRef.current.armPitch, 0, -poseRef.current.armSpread)
-    if (torsoRef.current) torsoRef.current.rotation.x = poseRef.current.torsoLean
-    if (headRef.current) headRef.current.rotation.x = poseRef.current.headTilt
+    // Feint curves are already eased; a fast follow just hides the pop when a feint is cancelled by a real toss.
+    const targetFeint = feintVariant && feintProgress !== null ? feintMotion(feintVariant, feintProgress) : ZERO_FEINT_MOTION
+    const fk = 1 - Math.exp(-delta * 28)
+    const m = feintRef.current
+    for (const key of FEINT_KEYS) m[key] += (targetFeint[key] - m[key]) * fk
 
+    const p = poseRef.current
+    if (leftArmRef.current) leftArmRef.current.rotation.set(p.armPitch + m.armPitch, 0, p.armSpread + m.armSpread)
+    if (rightArmRef.current)
+      rightArmRef.current.rotation.set(p.armPitch + m.armPitch + m.throwArm, 0, -(p.armSpread + m.armSpread))
+    if (torsoRef.current) torsoRef.current.rotation.x = p.torsoLean + m.torsoLean
+    if (headRef.current) headRef.current.rotation.x = p.headTilt - m.torsoLean * 0.35
+    if (upperBodyRef.current) {
+      upperBodyRef.current.position.y = m.crouchY
+      upperBodyRef.current.rotation.y = -m.twist
+    }
+
+    let punch = 0
     if (flashElapsedRef.current < FLASH_DURATION_MS) {
       flashElapsedRef.current += delta * 1000
-      // Toss attackers get a forward lunge punch that snaps out then eases back.
-      if (lungeRef.current && activeFlash.current === "toss") {
-        const t = Math.min(1, flashElapsedRef.current / FLASH_DURATION_MS)
-        const punch = Math.sin(t * Math.PI) * 0.16
-        lungeRef.current.position.z = -punch
-      }
       const t = Math.min(1, flashElapsedRef.current / FLASH_DURATION_MS)
+      // Toss attackers get a forward lunge punch that snaps out then eases back.
+      if (activeFlash.current === "toss") punch = Math.sin(t * Math.PI) * 0.16
       const flashColor = activeFlash.current ? FLASH_COLOR[activeFlash.current] : OUTLINE_COLOR
-      const mix = 1 - t
-      outlineColorRef.current = mixHexColors(flashColor, OUTLINE_COLOR, mix)
-    } else if (lungeRef.current) {
-      lungeRef.current.position.z = 0
+      outlineColorRef.current = mixHexColors(flashColor, OUTLINE_COLOR, 1 - t)
+    }
+    if (lungeRef.current) {
+      lungeRef.current.position.x = m.shiftX
+      lungeRef.current.position.z = -(punch + m.forward)
     }
   })
 
@@ -164,6 +185,8 @@ export function CharacterLowPoly({
           <boxGeometry args={[0.19, 0.12, 0.32]} />
         </ToonPart>
 
+        {/* upper body: crouches and twists as one unit during feints */}
+        <group ref={upperBodyRef}>
         {/* torso (leans with pose, rim-flashes on combat events) */}
         <group ref={torsoRef} position={[0, 1.05, 0]}>
           <ToonPart color={shirtColor} outlineColor={rimColor} position={[0, 0, 0]}>
@@ -211,6 +234,7 @@ export function CharacterLowPoly({
           <ToonPart color={skinColor} outlineThickness={0.03} position={[0, -0.56, 0]}>
             <sphereGeometry args={[0.1, 10, 8]} />
           </ToonPart>
+        </group>
         </group>
 
         {showBurst && <ImpactBurst elapsed={flashElapsedRef.current} duration={FLASH_DURATION_MS} color={burstColor} />}

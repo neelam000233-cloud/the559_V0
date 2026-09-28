@@ -16,7 +16,8 @@ import {
   LightShafts,
 } from "@/components/game/office-props"
 import { getToonGradientMap } from "@/lib/three-toon"
-import { deriveCharacterVisual } from "@/lib/game/character-action"
+import { deriveCharacterVisual, IDLE_VISUAL } from "@/lib/game/character-action"
+import { feintDocWorldOffset, fighterFeintMotion } from "@/lib/game/feint-motion"
 import { SHAKE_MAGNITUDE, SHAKE_SAN_THRESHOLD } from "@/lib/game/constants"
 import type { EffectsIntensity, GameState } from "@/lib/game/types"
 
@@ -64,6 +65,63 @@ function ScreenShake({
   })
 
   return <group ref={groupRef}>{children}</group>
+}
+
+/**
+ * Camera leans toward whoever is feinting and follows the fake's direction, with a
+ * slight zoom punch on the commit — so the fake reads, and briefly baits the eye too.
+ */
+function FeintCameraFollow({ gameState, intensity }: { gameState?: GameState; intensity: EffectsIntensity }) {
+  const baseRef = useRef<{ pos: THREE.Vector3; fov: number } | null>(null)
+  const offsetRef = useRef(new THREE.Vector3())
+  const lookRef = useRef(new THREE.Vector3())
+  const zoomRef = useRef(0)
+  const lookBase = useRef(new THREE.Vector3(0, 1.0, -1.6))
+
+  useFrame(({ camera }, delta) => {
+    const cam = camera as THREE.PerspectiveCamera
+    if (!baseRef.current) baseRef.current = { pos: cam.position.clone(), fov: cam.fov }
+    const base = baseRef.current
+
+    const target = new THREE.Vector3()
+    const look = new THREE.Vector3()
+    let zoom = 0
+    if (gameState?.isRunning) {
+      const scale = intensity === "strong" ? 1 : 0.45
+      for (const id of ["player", "opponent"] as const) {
+        const m = fighterFeintMotion(gameState, id)
+        if (m.energy <= 0) continue
+        const [dx, dy, dz] = feintDocWorldOffset(m, id)
+        // Opponent is far away, so their fakes need a bigger camera push to read.
+        const w = (id === "opponent" ? 1.25 : 0.8) * scale
+        target.x += (dx * 0.55 + (id === "player" ? m.shiftX : -m.shiftX) * 0.5) * w
+        target.y += dy * 0.25 * w
+        target.z += (id === "opponent" ? -0.35 : -0.18) * m.energy * w
+        look.x += dx * 0.9 * w
+        look.y += dy * 0.35 * w
+        look.z += dz * 0.4 * w
+        zoom = Math.max(zoom, m.energy * 5 * scale)
+      }
+    }
+
+    offsetRef.current.x = THREE.MathUtils.damp(offsetRef.current.x, target.x, 9, delta)
+    offsetRef.current.y = THREE.MathUtils.damp(offsetRef.current.y, target.y, 9, delta)
+    offsetRef.current.z = THREE.MathUtils.damp(offsetRef.current.z, target.z, 9, delta)
+    lookRef.current.x = THREE.MathUtils.damp(lookRef.current.x, look.x, 10, delta)
+    lookRef.current.y = THREE.MathUtils.damp(lookRef.current.y, look.y, 10, delta)
+    lookRef.current.z = THREE.MathUtils.damp(lookRef.current.z, look.z, 10, delta)
+    zoomRef.current = THREE.MathUtils.damp(zoomRef.current, zoom, 12, delta)
+
+    cam.position.copy(base.pos).add(offsetRef.current)
+    cam.lookAt(lookBase.current.x + lookRef.current.x, lookBase.current.y + lookRef.current.y, lookBase.current.z + lookRef.current.z)
+    const fov = base.fov - zoomRef.current
+    if (Math.abs(cam.fov - fov) > 0.01) {
+      cam.fov = fov
+      cam.updateProjectionMatrix()
+    }
+  })
+
+  return null
 }
 
 /** Low sun outside the window, raking warm light through the room toward the camera. */
@@ -142,14 +200,15 @@ export function OfficeSceneContents({
 }) {
   const playerVisual = gameState
     ? deriveCharacterVisual(gameState.fighters.player, gameState.documentOwner === "player", gameState.now)
-    : { pose: "idle-hold" as const, flash: null, flashAt: 0 }
+    : { ...IDLE_VISUAL, pose: "idle-hold" as const }
   const opponentVisual = gameState
     ? deriveCharacterVisual(gameState.fighters.opponent, gameState.documentOwner === "opponent", gameState.now)
-    : { pose: "idle-wait" as const, flash: null, flashAt: 0 }
+    : { ...IDLE_VISUAL, pose: "idle-wait" as const }
 
   return (
     <>
       <fog attach="fog" args={["#3a2a40", 6, 20]} />
+      <FeintCameraFollow gameState={gameState} intensity={effectsIntensity} />
 
       <SunLight />
       <ScreenShake gameState={gameState} intensity={effectsIntensity}>
@@ -180,6 +239,8 @@ export function OfficeSceneContents({
         pose={playerVisual.pose}
         flash={playerVisual.flash}
         flashKey={playerVisual.flashAt}
+        feintVariant={playerVisual.feintVariant}
+        feintProgress={playerVisual.feintProgress}
       />
 
       {/* Player B — across the desk, facing the camera, violet shirt */}
@@ -191,6 +252,8 @@ export function OfficeSceneContents({
         pose={opponentVisual.pose}
         flash={opponentVisual.flash}
         flashKey={opponentVisual.flashAt}
+        feintVariant={opponentVisual.feintVariant}
+        feintProgress={opponentVisual.feintProgress}
       />
       </ScreenShake>
     </>
