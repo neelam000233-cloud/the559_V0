@@ -25,7 +25,7 @@ export function deriveDocumentFlight(state: GameState, now: number): DocumentFli
 
   // The document just arrived at its new owner via a landed toss or a blocked hit.
   if (
-    (ownerFighter.lastActionLabel === "中招了！" || ownerFighter.lastActionLabel === "防守（減傷）") &&
+    (ownerFighter.lastActionLabel === "Got hit!" || ownerFighter.lastActionLabel === "Blocked (reduced)") &&
     now - ownerFighter.lastActionAt < TOSS_FLIGHT_MS
   ) {
     const progress = Math.min(1, (now - ownerFighter.lastActionAt) / TOSS_FLIGHT_MS)

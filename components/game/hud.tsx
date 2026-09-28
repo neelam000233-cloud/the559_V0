@@ -43,8 +43,8 @@ function FighterPanel({ fighter, side }: { fighter: FighterState; side: "left" |
   return (
     <div className={cn("flex flex-col gap-1.5", align)}>
       <span className={cn("text-xs font-bold uppercase tracking-wider text-amber-100/90", textAlign)}>
-        {isPlayer ? "玩家" : "對手"}
-        {fighter.combo > 1 && <span className="ml-1.5 text-orange-300">連擊 x{fighter.combo}</span>}
+        {isPlayer ? "Player" : "Opponent"}
+        {fighter.combo > 1 && <span className="ml-1.5 text-orange-300">Combo x{fighter.combo}</span>}
       </span>
       <StatBar value={fighter.san} max={MAX_SAN} colorClass="bg-sky-400" align={side === "left" ? "left" : "right"} />
       <StatBar value={fighter.heat} max={MAX_HEAT} colorClass="bg-red-500" align={side === "left" ? "left" : "right"} />
@@ -66,7 +66,7 @@ export function GameHud({
   onOpenSettings: () => void
 }) {
   const { player, opponent } = state.fighters
-  const documentLabel = state.documentOwner === "player" ? "文件在你手上" : "文件在對手手上"
+  const documentLabel = state.documentOwner === "player" ? "You have the document" : "Opponent has the document"
 
   return (
     <>
@@ -81,13 +81,13 @@ export function GameHud({
             onClick={onTogglePause}
             className="rounded-md bg-black/40 px-2 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10 hover:bg-black/60"
           >
-            {state.isPaused ? "繼續" : "暫停"}
+            {state.isPaused ? "Resume" : "Pause"}
           </button>
           <button
             onClick={onOpenSettings}
             className="rounded-md bg-black/40 px-2 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10 hover:bg-black/60"
           >
-            設置
+              Settings
           </button>
         </div>
 
@@ -107,7 +107,7 @@ export function GameHud({
           )}
         </div>
         <p className="text-[11px] text-white/40">
-          持有文件時：空格＝甩鍋 · F＝假動作　　未持有時：長按空格＝防守（前段為 Parry）
+          With document: Space = Toss · F = Feint{"  |  "}Without: Hold Space = Block (early window = Parry)
         </p>
       </div>
     </>

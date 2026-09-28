@@ -33,16 +33,16 @@ export function deriveCharacterVisual(fighter: FighterState, isDocumentOwner: bo
   let flash: CharacterFlash = null
   if (fighter.lastActionLabel && now - fighter.lastActionAt < FLASH_WINDOW_MS) {
     switch (fighter.lastActionLabel) {
-      case "甩鍋成功！":
+      case "Blame tossed!":
         flash = "toss"
         break
       case "PARRY!":
         flash = "parry"
         break
-      case "防守（減傷）":
+      case "Blocked (reduced)":
         flash = "block"
         break
-      case "中招了！":
+      case "Got hit!":
         flash = "hit"
         break
     }

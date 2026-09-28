@@ -46,11 +46,11 @@ export const ABILITY_KEYS: AbilityKey[] = [
 ]
 
 export const ABILITY_LABELS: Record<AbilityKey, string> = {
-  parryMultiplier: "Parry 時長",
-  defenseReduction: "防守減傷",
-  attackDamage: "攻擊傷害",
-  sanResistance: "San 抗性",
-  heatResistance: "Heat 抗性",
+  parryMultiplier: "Parry Window",
+  defenseReduction: "Block Reduction",
+  attackDamage: "Attack Damage",
+  sanResistance: "SAN Resistance",
+  heatResistance: "HEAT Resistance",
 }
 
 /** Convert an allocated point count (0-10 per stat) into the actual ability value. */

@@ -170,7 +170,7 @@ export class GameEngine {
     if (f.isHoldingSpace) return // ignore key-repeat
 
     if (this.state.documentOwner === id) {
-      // Attacker role: a press is an instant 甩鍋 attack attempt.
+      // Attacker role: a press is an instant blame-toss attack attempt.
       if (!f.hasAttackedThisPress) {
         f.hasAttackedThisPress = true
         this.attemptAttack(id)
@@ -206,7 +206,7 @@ export class GameEngine {
     if (f.feintCooldownUntil !== null && this.state.now < f.feintCooldownUntil) return
     f.isFeinting = true
     f.feintCooldownUntil = this.state.now + 900
-    this.pushLog("假動作！", id)
+    this.pushLog("Feint!", id)
     this.emit()
     setTimeout(() => {
       f.isFeinting = false
@@ -236,7 +236,7 @@ export class GameEngine {
       defender.lastActionLabel = "PARRY!"
       defender.lastActionAt = this.state.now
       attacker.lastActionLabel = null
-      this.pushLog("Parry 成功！文件反彈", defenderId)
+      this.pushLog("Parry! Document bounced back", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
     } else if (defender.phase === "defending") {
@@ -247,10 +247,10 @@ export class GameEngine {
       defender.stats.heatGained += dmg.heat
       defender.stats.blocksLanded += 1
       defender.combo = 0
-      defender.lastActionLabel = "防守（減傷）"
+      defender.lastActionLabel = "Blocked (reduced)"
       defender.lastActionAt = this.state.now
       this.state.documentOwner = defenderId
-      this.pushLog("防守成功，傷害降低，文件轉移", defenderId)
+      this.pushLog("Blocked! Damage reduced, document transferred", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
     } else {
@@ -261,12 +261,12 @@ export class GameEngine {
       defender.stats.heatGained += dmg.heat
       attacker.stats.tossesLanded += 1
       defender.combo = 0
-      attacker.lastActionLabel = "甩鍋成功！"
+      attacker.lastActionLabel = "Blame tossed!"
       attacker.lastActionAt = this.state.now
-      defender.lastActionLabel = "中招了！"
+      defender.lastActionLabel = "Got hit!"
       defender.lastActionAt = this.state.now
       this.state.documentOwner = defenderId
-      this.pushLog("甩鍋成功！文件轉移", attackerId)
+      this.pushLog("Blame tossed! Document transferred", attackerId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
     }
@@ -328,10 +328,10 @@ export class GameEngine {
     this.state.isRunning = false
     this.pushLog(
       outcome?.type === "win"
-        ? `${outcome.winner === "player" ? "玩家" : "對手"} 獲勝（${outcome.reason === "san" ? "SAN 歸零" : "HEAT 爆滿"}）`
+        ? `${outcome.winner === "player" ? "Player" : "Opponent"} wins (${outcome.reason === "san" ? "SAN depleted" : "HEAT maxed"})`
         : outcome?.type === "doubleLoss"
-          ? "雙輸"
-          : "雙贏",
+          ? "Double loss"
+          : "Double win",
       null,
     )
   }
