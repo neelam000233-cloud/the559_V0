@@ -15,6 +15,8 @@ import {
   LightShafts,
 } from "@/components/game/office-props"
 import { getToonGradientMap } from "@/lib/three-toon"
+import { deriveCharacterVisual } from "@/lib/game/character-action"
+import type { GameState } from "@/lib/game/types"
 
 /** Low sun outside the window, raking warm light through the room toward the camera. */
 function SunLight() {
@@ -83,7 +85,14 @@ function RoomShell() {
   )
 }
 
-export function OfficeSceneContents() {
+export function OfficeSceneContents({ gameState }: { gameState?: GameState }) {
+  const playerVisual = gameState
+    ? deriveCharacterVisual(gameState.fighters.player, gameState.documentOwner === "player", gameState.now)
+    : { pose: "idle-hold" as const, flash: null, flashAt: 0 }
+  const opponentVisual = gameState
+    ? deriveCharacterVisual(gameState.fighters.opponent, gameState.documentOwner === "opponent", gameState.now)
+    : { pose: "idle-wait" as const, flash: null, flashAt: 0 }
+
   return (
     <>
       <fog attach="fog" args={["#3a2a40", 6, 20]} />
@@ -108,10 +117,26 @@ export function OfficeSceneContents() {
       <WallFrame position={[-2.3, 1.9, -6.0]} tone="#b7c2c9" />
 
       {/* Player A — near the camera, back turned, magenta/pink shirt */}
-      <CharacterLowPoly position={[0, 0, 0.35]} facing={1} shirtColor="#d13a7c" pantsColor="#241c2b" />
+      <CharacterLowPoly
+        position={[0, 0, 0.35]}
+        facing={1}
+        shirtColor="#d13a7c"
+        pantsColor="#241c2b"
+        pose={playerVisual.pose}
+        flash={playerVisual.flash}
+        flashKey={playerVisual.flashAt}
+      />
 
       {/* Player B — across the desk, facing the camera, violet shirt */}
-      <CharacterLowPoly position={[0.05, 0, -3.0]} facing={-1} shirtColor="#7a3ad1" pantsColor="#201a2b" />
+      <CharacterLowPoly
+        position={[0.05, 0, -3.0]}
+        facing={-1}
+        shirtColor="#7a3ad1"
+        pantsColor="#201a2b"
+        pose={opponentVisual.pose}
+        flash={opponentVisual.flash}
+        flashKey={opponentVisual.flashAt}
+      />
     </>
   )
 }

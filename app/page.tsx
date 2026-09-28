@@ -1,12 +1,21 @@
 "use client"
 
-import { Suspense } from "react"
+import { Suspense, useState } from "react"
 import * as THREE from "three"
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { OfficeSceneContents } from "@/components/game/office-scene"
+import { GameHud } from "@/components/game/hud"
+import { useGameEngine } from "@/hooks/use-game-engine"
+import type { AIDifficulty } from "@/lib/game/types"
 
 export default function Page() {
+  const [difficulty, setDifficulty] = useState<AIDifficulty>(1)
+  const { state, start, setPaused, reset } = useGameEngine({ difficulty })
+  const [showSettings, setShowSettings] = useState(false)
+
+  const showStartScreen = !state.isRunning && !state.outcome
+
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-[#140f1a]">
       <Canvas
@@ -20,7 +29,7 @@ export default function Page() {
       >
         <color attach="background" args={["#1c1420"]} />
         <Suspense fallback={null}>
-          <OfficeSceneContents />
+          <OfficeSceneContents gameState={state} />
         </Suspense>
         <OrbitControls
           target={[0.05, 1.35, -2.8]}
@@ -35,10 +44,101 @@ export default function Page() {
         />
       </Canvas>
 
-      <div className="pointer-events-none absolute left-4 top-4 max-w-[min(90vw,22rem)] rounded-md bg-black/50 px-3 py-2 text-xs text-amber-100 backdrop-blur-sm">
-        <p className="font-semibold tracking-wide">静态场景预览 · 构图与光影确认</p>
-        <p className="mt-1 text-amber-200/70">拖动旋转视角 · 滚轮缩放 · 尚未加入交互玩法</p>
-      </div>
+      {!showStartScreen && (
+        <GameHud state={state} onTogglePause={() => setPaused(!state.isPaused)} onOpenSettings={() => setShowSettings(true)} />
+      )}
+
+      {showStartScreen && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="flex w-[min(90vw,22rem)] flex-col gap-4 rounded-lg bg-[#241a2e] p-6 ring-1 ring-white/10">
+            <h1 className="text-center text-lg font-bold text-amber-100">甩鍋大戰 · PvE</h1>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-white/60">AI 難度</span>
+              <div className="flex gap-2">
+                {[1, 2, 3].map((lvl) => (
+                  <button
+                    key={lvl}
+                    onClick={() => setDifficulty(lvl as AIDifficulty)}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-sm font-semibold ring-1 ring-white/10 ${
+                      difficulty === lvl ? "bg-orange-500 text-black" : "bg-black/30 text-white/70 hover:bg-black/50"
+                    }`}
+                  >
+                    Lv{lvl}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-white/40">
+                {difficulty === 1 && "Lv1：對手不會觀察玩家，且無法 Parry / 假動作"}
+                {difficulty === 2 && "Lv2：對手不會觀察玩家，但會 Parry / 假動作"}
+                {difficulty === 3 && "Lv3：對手會觀察玩家行為，也會 Parry / 假動作"}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                reset({ difficulty })
+                start()
+              }}
+              className="rounded-md bg-orange-500 py-2 text-sm font-bold text-black hover:bg-orange-400"
+            >
+              開始對局
+            </button>
+            <p className="text-center text-[11px] text-white/40">
+              持有文件時：空格＝甩鍋，F＝假動作。未持有時：長按空格＝防守，前 0-1 秒為 Parry。
+            </p>
+          </div>
+        </div>
+      )}
+
+      {state.outcome && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="flex w-[min(90vw,24rem)] flex-col gap-3 rounded-lg bg-[#241a2e] p-6 text-center ring-1 ring-white/10">
+            <h2 className="text-xl font-bold text-amber-100">
+              {state.outcome.type === "win" && (state.outcome.winner === "player" ? "你贏了！" : "你輸了")}
+              {state.outcome.type === "doubleLoss" && "雙輸"}
+              {state.outcome.type === "doubleWin" && "雙贏"}
+            </h2>
+            <div className="grid grid-cols-2 gap-3 text-left text-xs text-white/70">
+              {(["player", "opponent"] as const).map((id) => {
+                const f = state.fighters[id]
+                return (
+                  <div key={id} className="rounded-md bg-black/30 p-2 ring-1 ring-white/10">
+                    <p className="mb-1 font-semibold text-amber-100">{id === "player" ? "玩家" : "對手"}</p>
+                    <p>甩鍋成功：{f.stats.tossesLanded}</p>
+                    <p>Parry 成功：{f.stats.parriesLanded}</p>
+                    <p>防守成功：{f.stats.blocksLanded}</p>
+                    <p>SAN 剩餘：{Math.ceil(f.san)}</p>
+                    <p>HEAT：{Math.ceil(f.heat)}</p>
+                  </div>
+                )
+              })}
+            </div>
+            <button
+              onClick={() => reset({ difficulty })}
+              className="mt-1 rounded-md bg-orange-500 py-2 text-sm font-bold text-black hover:bg-orange-400"
+            >
+              再來一局
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm" onClick={() => setShowSettings(false)}>
+          <div
+            className="flex w-[min(90vw,20rem)] flex-col gap-3 rounded-lg bg-[#241a2e] p-5 ring-1 ring-white/10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-sm font-bold text-amber-100">設置</h2>
+            <p className="text-xs text-white/50">手抖 / 鏡頭震動 / Hitstop / 屏幕特效強度：強弱兩檔（下一步實作）</p>
+            <button
+              onClick={() => setShowSettings(false)}
+              className="rounded-md bg-black/30 py-1.5 text-xs text-white/70 ring-1 ring-white/10 hover:bg-black/50"
+            >
+              關閉
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   )
 }

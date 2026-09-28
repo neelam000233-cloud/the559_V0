@@ -1,0 +1,69 @@
+export type PlayerId = "player" | "opponent"
+
+export type AIDifficulty = 1 | 2 | 3
+
+/** Player-allocated ability points (10 total across 5 stats for v1). */
+export interface Abilities {
+  /** Multiplies the shared base parry window (difficulty-derived). */
+  parryMultiplier: number
+  /** Fraction (0-1) of incoming damage negated while blocking outside the parry window. */
+  defenseReduction: number
+  /** Base SAN damage dealt on a successful toss. */
+  attackDamage: number
+  /** Fraction (0-1) reduction to SAN damage taken. */
+  sanResistance: number
+  /** Fraction (0-1) reduction to HEAT gained when hit. */
+  heatResistance: number
+}
+
+export type AbilityKey = keyof Abilities
+
+/** What the defender was doing at the instant they were attacked. */
+export type CombatPhase = "idle" | "parryWindow" | "defending" | "cooldown"
+
+export interface FighterState {
+  id: PlayerId
+  san: number
+  heat: number
+  abilities: Abilities
+  isHoldingSpace: boolean
+  holdStartTime: number | null
+  phase: CombatPhase
+  cooldownUntil: number | null
+  combo: number
+  isFeinting: boolean
+  feintCooldownUntil: number | null
+  lastActionLabel: string | null
+  lastActionAt: number
+  hasAttackedThisPress: boolean
+  stats: {
+    tossesLanded: number
+    parriesLanded: number
+    blocksLanded: number
+    sanLost: number
+    heatGained: number
+  }
+}
+
+export type MatchOutcome =
+  | { type: "win"; winner: PlayerId; reason: "san" | "heat" }
+  | { type: "doubleLoss" }
+  | { type: "doubleWin" }
+
+export interface GameState {
+  now: number
+  remainingMs: number
+  isPaused: boolean
+  isRunning: boolean
+  documentOwner: PlayerId
+  fighters: Record<PlayerId, FighterState>
+  outcome: MatchOutcome | null
+  log: { id: number; text: string; owner: PlayerId | null }[]
+}
+
+export interface MatchConfig {
+  difficulty: AIDifficulty
+  matchDurationMs: number
+  playerAbilities: Abilities
+  opponentAbilities: Abilities
+}
