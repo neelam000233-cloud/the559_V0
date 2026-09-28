@@ -31,7 +31,7 @@ function SunLight() {
     <>
       <directionalLight
         ref={lightRef}
-        position={[0.15, 2.5, -8.4]}
+        position={[6.5, 2.7, -1.3]}
         intensity={4.2}
         color="#ff9152"
         castShadow
@@ -44,7 +44,7 @@ function SunLight() {
         shadow-camera-bottom={-5}
         shadow-bias={-0.0015}
       />
-      <object3D ref={targetRef} position={[0, 0.85, 2]} />
+      <object3D ref={targetRef} position={[-0.5, 0.85, -1.3]} />
       {/* cool fill light from the camera side, so the near player isn't a pure black silhouette */}
       <directionalLight position={[0.6, 2.2, 3.4]} intensity={0.55} color="#7a8fd4" />
       {/* warm bounce light over the desk so the folder/props stay readable */}
@@ -90,7 +90,7 @@ export function OfficeSceneContents() {
 
       <SunLight />
       <RoomShell />
-      <Window />
+      <Window position={[4.2, 0, -1.3]} rotation={[0, -Math.PI / 2, 0]} />
       <LightShafts />
 
       <Desk />
@@ -104,8 +104,8 @@ export function OfficeSceneContents() {
 
       <WallFrame position={[-4.42, 1.9, -1]} rotation={[0, Math.PI / 2, 0]} tone="#c9b98a" />
       <WallFrame position={[-4.42, 1.9, -3.2]} rotation={[0, Math.PI / 2, 0]} tone="#b7c2c9" />
-      <WallFrame position={[4.42, 1.9, -1]} rotation={[0, -Math.PI / 2, 0]} tone="#c9b98a" />
-      <WallFrame position={[4.42, 1.9, -3.2]} rotation={[0, -Math.PI / 2, 0]} tone="#b7c2c9" />
+      <WallFrame position={[0, 1.9, -6.0]} tone="#c9b98a" />
+      <WallFrame position={[-2.3, 1.9, -6.0]} tone="#b7c2c9" />
 
       {/* Player A — near the camera, back turned, magenta/pink shirt */}
       <CharacterLowPoly position={[0, 0, 0.35]} facing={1} shirtColor="#d13a7c" pantsColor="#241c2b" />

@@ -180,10 +180,13 @@ export function WallFrame({
   )
 }
 
-/** Back wall window: warm sunset glow, skyline silhouette, frame and venetian blinds. */
-export function Window({ position = [0, 0, -6.02] as [number, number, number] }) {
+/** Side wall window: warm sunset glow, skyline silhouette, frame and venetian blinds. */
+export function Window({
+  position = [0, 0, -6.02] as [number, number, number],
+  rotation = [0, 0, 0] as [number, number, number],
+}) {
   return (
-    <group position={position}>
+    <group position={position} rotation={rotation}>
       {/* sunset glow fill */}
       <mesh position={[0, 1.72, -0.35]}>
         <planeGeometry args={[3.5, 1.9]} />
@@ -236,12 +239,12 @@ export function Window({ position = [0, 0, -6.02] as [number, number, number] })
   )
 }
 
-/** Thin additive light-shaft planes fanning from the window down onto the desk. */
+/** Thin additive light-shaft planes fanning from the side window across to the desk. */
 export function LightShafts() {
   const shafts: Array<{ position: [number, number, number]; rotation: [number, number, number]; scaleY: number }> = [
-    { position: [-0.55, 1.9, -3.4], rotation: [Math.PI / 2 - 0.5, 0.05, 0.08], scaleY: 1 },
-    { position: [0, 1.95, -3.3], rotation: [Math.PI / 2 - 0.52, 0, 0], scaleY: 1.1 },
-    { position: [0.55, 1.9, -3.4], rotation: [Math.PI / 2 - 0.5, -0.05, -0.08], scaleY: 1 },
+    { position: [3.2, 1.95, -1.9], rotation: [0.06, 0.06, 1.84], scaleY: 1 },
+    { position: [1.9, 1.6, -1.3], rotation: [0, 0, 1.84], scaleY: 1.1 },
+    { position: [0.7, 1.25, -0.7], rotation: [-0.06, -0.06, 1.84], scaleY: 1 },
   ]
   return (
     <group>
