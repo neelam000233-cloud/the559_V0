@@ -1,8 +1,12 @@
 "use client"
 
+import { useRef } from "react"
 import * as THREE from "three"
+import { useFrame } from "@react-three/fiber"
 import { Edges } from "@react-three/drei"
 import { getToonGradientMap } from "@/lib/three-toon"
+import { deriveDocumentFlight } from "@/lib/game/document-flight"
+import type { GameState, PlayerId } from "@/lib/game/types"
 
 /** A hard-surface prop piece: toon-shaded solid + crisp comic-book edge lines. */
 function PropMesh({
@@ -63,6 +67,60 @@ export function Desk({ position = [0, 0, -1.3] as [number, number, number] }) {
 export function Folder({ position = [0, 1.32, -1.3] as [number, number, number] }) {
   return (
     <group position={position} rotation={[0.1, 0, 0]}>
+      <PropMesh color="#e2c589" edgeColor="#4a3417">
+        <boxGeometry args={[0.32, 0.24, 0.02]} />
+      </PropMesh>
+      <PropMesh color="#c9a86b" edgeColor="#4a3417" position={[0, 0.01, 0.011]}>
+        <boxGeometry args={[0.3, 0.08, 0.005]} />
+      </PropMesh>
+    </group>
+  )
+}
+
+const DOCUMENT_REST_POSITION: Record<PlayerId, [number, number, number]> = {
+  player: [0, 1.32, -0.5],
+  opponent: [0.05, 1.32, -2.1],
+}
+const DOCUMENT_FLIGHT_ARC_HEIGHT = 0.55
+
+function lerpVec3(a: [number, number, number], b: [number, number, number], t: number): [number, number, number] {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
+}
+
+/** The file folder both fighters fight over — arcs across the desk on a toss, snaps back on a parry. */
+export function FlyingFolder({ gameState }: { gameState?: GameState }) {
+  const groupRef = useRef<THREE.Group>(null)
+
+  useFrame(() => {
+    const group = groupRef.current
+    if (!group) return
+
+    if (!gameState) {
+      group.position.set(...DOCUMENT_REST_POSITION.player)
+      group.rotation.set(0.1, 0, 0)
+      return
+    }
+
+    const flight = deriveDocumentFlight(gameState, gameState.now)
+    if (flight.phase === "resting") {
+      const rest = DOCUMENT_REST_POSITION[flight.restOwner]
+      group.position.set(rest[0], rest[1], rest[2])
+      group.rotation.set(0.1, 0, 0)
+      return
+    }
+
+    // A bounce goes out and snaps back within one animation window; a toss travels straight across.
+    const travel = flight.phase === "parry-bounce" ? 1 - Math.abs(1 - 2 * flight.progress) : flight.progress
+    const [x, y, z] = lerpVec3(DOCUMENT_REST_POSITION[flight.fromOwner], DOCUMENT_REST_POSITION[flight.toOwner], travel)
+    const arc = Math.sin(flight.progress * Math.PI) * DOCUMENT_FLIGHT_ARC_HEIGHT
+    const spin = flight.progress * Math.PI * 2.4
+
+    group.position.set(x, y + arc, z)
+    group.rotation.set(0.1 + Math.sin(spin) * 0.4, spin, 0)
+  })
+
+  return (
+    <group ref={groupRef} position={DOCUMENT_REST_POSITION.player} rotation={[0.1, 0, 0]}>
       <PropMesh color="#e2c589" edgeColor="#4a3417">
         <boxGeometry args={[0.32, 0.24, 0.02]} />
       </PropMesh>

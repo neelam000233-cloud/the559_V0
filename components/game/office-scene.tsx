@@ -5,7 +5,7 @@ import * as THREE from "three"
 import { CharacterLowPoly } from "@/components/game/character-lowpoly"
 import {
   Desk,
-  Folder,
+  FlyingFolder,
   FileCabinet,
   ComputerDesk,
   CoffeeCup,
@@ -103,7 +103,7 @@ export function OfficeSceneContents({ gameState }: { gameState?: GameState }) {
       <LightShafts />
 
       <Desk />
-      <Folder />
+      <FlyingFolder gameState={gameState} />
       <FileCabinet />
       <ComputerDesk />
       <CoffeeCup />
