@@ -251,7 +251,7 @@ export function LightShafts() {
           <meshBasicMaterial
             color="#ffb066"
             transparent
-            opacity={0.055}
+            opacity={0.11}
             toneMapped={false}
             blending={THREE.AdditiveBlending}
             depthWrite={false}

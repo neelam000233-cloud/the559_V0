@@ -32,7 +32,7 @@ function SunLight() {
       <directionalLight
         ref={lightRef}
         position={[0.15, 2.5, -8.4]}
-        intensity={1.9}
+        intensity={4.2}
         color="#ff9152"
         castShadow
         shadow-mapSize={[2048, 2048]}

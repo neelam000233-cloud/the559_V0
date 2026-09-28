@@ -15,7 +15,7 @@ export default function Page() {
         gl={{ antialias: true }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping
-          gl.toneMappingExposure = 1.15
+          gl.toneMappingExposure = 1.55
         }}
       >
         <color attach="background" args={["#1c1420"]} />
