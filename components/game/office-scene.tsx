@@ -76,7 +76,7 @@ function FeintCameraFollow({ gameState, intensity }: { gameState?: GameState; in
   const offsetRef = useRef(new THREE.Vector3())
   const lookRef = useRef(new THREE.Vector3())
   const zoomRef = useRef(0)
-  const lookBase = useRef(new THREE.Vector3(0, 1.0, -1.6))
+  const lookBase = useRef(new THREE.Vector3(0.25, 1.0, -1.6))
 
   useFrame(({ camera }, delta) => {
     const cam = camera as THREE.PerspectiveCamera
