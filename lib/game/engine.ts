@@ -5,6 +5,7 @@ import {
   BASE_PARRY_WINDOW_MS,
   DOUBLE_LOSS_HEAT_THRESHOLD,
   DOUBLE_LOSS_SAN_THRESHOLD,
+  HITSTOP_MS,
   MAX_HEAT,
   MAX_SAN,
   TAP_GUARD_MS,
@@ -62,6 +63,7 @@ export class GameEngine {
       },
       outcome: null,
       log: [],
+      hitstopUntil: null,
     }
   }
 
@@ -110,6 +112,16 @@ export class GameEngine {
   /** Main loop tick, called every animation frame with the elapsed delta in ms. */
   tick(dtMs: number) {
     if (!this.state.isRunning || this.state.isPaused || this.state.outcome) return
+
+    if (this.state.hitstopUntil !== null) {
+      if (this.state.now < this.state.hitstopUntil) {
+        // Frozen: don't advance the clock or simulate, just let animations react to the fresh hit.
+        this.emit()
+        return
+      }
+      this.state.hitstopUntil = null
+    }
+
     this.state.now += dtMs
     this.state.remainingMs = Math.max(0, this.state.remainingMs - dtMs)
 
@@ -228,6 +240,7 @@ export class GameEngine {
       attacker.lastActionLabel = null
       this.pushLog("Parry 成功！文件反彈", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
+      this.triggerHitstop()
     } else if (defender.phase === "defending") {
       const dmg = this.computeDamage(attacker, defender, true)
       defender.san = Math.max(0, defender.san - dmg.san)
@@ -241,6 +254,7 @@ export class GameEngine {
       this.state.documentOwner = defenderId
       this.pushLog("防守成功，傷害降低，文件轉移", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
+      this.triggerHitstop()
     } else {
       const dmg = this.computeDamage(attacker, defender, false)
       defender.san = Math.max(0, defender.san - dmg.san)
@@ -256,9 +270,19 @@ export class GameEngine {
       this.state.documentOwner = defenderId
       this.pushLog("甩鍋成功！文件轉移", attackerId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
+      this.triggerHitstop()
     }
     this.checkOutcomes()
     this.emit()
+  }
+
+  private triggerHitstop() {
+    this.state.hitstopUntil = this.state.now + HITSTOP_MS[this.config.effectsIntensity]
+  }
+
+  /** Update the screen-shake / hitstop strength from the Settings panel without resetting the match. */
+  setEffectsIntensity(intensity: MatchConfig["effectsIntensity"]) {
+    this.config = { ...this.config, effectsIntensity: intensity }
   }
 
   private checkOutcomes() {
@@ -366,6 +390,7 @@ export function createDefaultConfig(overrides?: Partial<MatchConfig>): MatchConf
   return {
     difficulty: 1,
     matchDurationMs: 3 * 60 * 1000,
+    effectsIntensity: "strong",
     playerAbilities: {
       parryMultiplier: 1.3,
       defenseReduction: 0.31,

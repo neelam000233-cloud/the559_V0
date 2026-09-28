@@ -7,12 +7,21 @@ import { OrbitControls } from "@react-three/drei"
 import { OfficeSceneContents } from "@/components/game/office-scene"
 import { GameHud } from "@/components/game/hud"
 import { useGameEngine } from "@/hooks/use-game-engine"
-import type { AIDifficulty } from "@/lib/game/types"
+import type { AIDifficulty, EffectsIntensity } from "@/lib/game/types"
 
 export default function Page() {
   const [difficulty, setDifficulty] = useState<AIDifficulty>(1)
-  const { state, start, setPaused, reset } = useGameEngine({ difficulty })
+  const [effectsIntensity, setEffectsIntensity] = useState<EffectsIntensity>("strong")
+  const { state, start, setPaused, reset, setEffectsIntensity: applyEffectsIntensity } = useGameEngine({
+    difficulty,
+    effectsIntensity,
+  })
   const [showSettings, setShowSettings] = useState(false)
+
+  const handleEffectsIntensityChange = (intensity: EffectsIntensity) => {
+    setEffectsIntensity(intensity)
+    applyEffectsIntensity(intensity)
+  }
 
   const showStartScreen = !state.isRunning && !state.outcome
 
@@ -129,7 +138,25 @@ export default function Page() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-sm font-bold text-amber-100">設置</h2>
-            <p className="text-xs text-white/50">手抖 / 鏡頭震動 / Hitstop / 屏幕特效強度：強弱兩檔（下一步實作）</p>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-white/60">打擊特效強度（鏡頭震動 / Hitstop）</span>
+              <div className="flex gap-2">
+                {(["strong", "weak"] as const).map((level) => (
+                  <button
+                    key={level}
+                    onClick={() => handleEffectsIntensityChange(level)}
+                    className={`flex-1 rounded-md px-2 py-1.5 text-sm font-semibold ring-1 ring-white/10 ${
+                      effectsIntensity === level ? "bg-orange-500 text-black" : "bg-black/30 text-white/70 hover:bg-black/50"
+                    }`}
+                  >
+                    {level === "strong" ? "強" : "弱"}
+                  </button>
+                ))}
+              </div>
+              <p className="text-[11px] text-white/40">
+                {effectsIntensity === "strong" ? "命中時鏡頭震動較大、短暫停格較長，打擊感更強烈。" : "命中反饋更輕微，適合偏好穩定畫面的玩家。"}
+              </p>
+            </div>
             <button
               onClick={() => setShowSettings(false)}
               className="rounded-md bg-black/30 py-1.5 text-xs text-white/70 ring-1 ring-white/10 hover:bg-black/50"

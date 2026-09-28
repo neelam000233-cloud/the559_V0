@@ -1,4 +1,4 @@
-import type { AbilityKey, AIDifficulty, Abilities } from "./types"
+import type { AbilityKey, AIDifficulty, Abilities, EffectsIntensity } from "./types"
 
 export const MATCH_DURATION_MS = 3 * 60 * 1000
 
@@ -20,6 +20,21 @@ export const TAP_GUARD_MS = 60
 
 export const BASE_ATTACK_DAMAGE = 12
 export const BASE_HEAT_GAIN_RATIO = 0.65
+
+/** Brief simulation freeze on impact (toss / block / parry) to sell the hit. */
+export const HITSTOP_MS: Record<EffectsIntensity, number> = {
+  strong: 110,
+  weak: 45,
+}
+
+/** Screen-shake magnitude (world units) applied while the impact is fresh. */
+export const SHAKE_MAGNITUDE: Record<EffectsIntensity, number> = {
+  strong: 0.05,
+  weak: 0.018,
+}
+
+/** How long after an impact the shake keeps decaying, in ms. */
+export const SHAKE_DECAY_MS = 220
 
 export const TOTAL_ABILITY_POINTS = 10
 export const ABILITY_KEYS: AbilityKey[] = [

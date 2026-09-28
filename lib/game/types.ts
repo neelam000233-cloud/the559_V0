@@ -2,6 +2,9 @@ export type PlayerId = "player" | "opponent"
 
 export type AIDifficulty = 1 | 2 | 3
 
+/** Strength of screen-shake / hitstop juice on impact. User-configurable in Settings. */
+export type EffectsIntensity = "strong" | "weak"
+
 /** Player-allocated ability points (10 total across 5 stats for v1). */
 export interface Abilities {
   /** Multiplies the shared base parry window (difficulty-derived). */
@@ -59,6 +62,8 @@ export interface GameState {
   fighters: Record<PlayerId, FighterState>
   outcome: MatchOutcome | null
   log: { id: number; text: string; owner: PlayerId | null }[]
+  /** While `now < hitstopUntil`, the simulation clock freezes to sell impact (screen-shake window). */
+  hitstopUntil: number | null
 }
 
 export interface MatchConfig {
@@ -66,4 +71,5 @@ export interface MatchConfig {
   matchDurationMs: number
   playerAbilities: Abilities
   opponentAbilities: Abilities
+  effectsIntensity: EffectsIntensity
 }

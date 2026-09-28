@@ -63,5 +63,6 @@ export function useGameEngine(config?: Partial<MatchConfig>) {
     start: () => engine.start(),
     setPaused: (paused: boolean) => engine.setPaused(paused),
     reset: (next?: Partial<MatchConfig>) => engine.reset(next),
+    setEffectsIntensity: (intensity: MatchConfig["effectsIntensity"]) => engine.setEffectsIntensity(intensity),
   }
 }

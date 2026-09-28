@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import * as THREE from "three"
+import { useFrame } from "@react-three/fiber"
 import { CharacterLowPoly } from "@/components/game/character-lowpoly"
 import {
   Desk,
@@ -16,7 +17,47 @@ import {
 } from "@/components/game/office-props"
 import { getToonGradientMap } from "@/lib/three-toon"
 import { deriveCharacterVisual } from "@/lib/game/character-action"
-import type { GameState } from "@/lib/game/types"
+import { SHAKE_DECAY_MS, SHAKE_MAGNITUDE } from "@/lib/game/constants"
+import type { EffectsIntensity, GameState } from "@/lib/game/types"
+
+/**
+ * Nudges its children with a short decaying random offset whenever a fresh hit lands
+ * (toss / block / parry), then settles back to rest. Purely a render-side effect —
+ * the actual gameplay pause happens in the engine's hitstop window.
+ */
+function ScreenShake({
+  gameState,
+  intensity,
+  children,
+}: {
+  gameState?: GameState
+  intensity: EffectsIntensity
+  children: React.ReactNode
+}) {
+  const groupRef = useRef<THREE.Group>(null)
+  const lastHitAtRef = useRef(0)
+
+  useFrame(() => {
+    const group = groupRef.current
+    if (!group) return
+
+    if (gameState) {
+      const hitAt = Math.max(gameState.fighters.player.lastActionAt, gameState.fighters.opponent.lastActionAt)
+      if (hitAt > lastHitAtRef.current) lastHitAtRef.current = hitAt
+    }
+
+    const elapsed = (gameState?.now ?? 0) - lastHitAtRef.current
+    if (lastHitAtRef.current > 0 && elapsed >= 0 && elapsed < SHAKE_DECAY_MS) {
+      const decay = 1 - elapsed / SHAKE_DECAY_MS
+      const magnitude = SHAKE_MAGNITUDE[intensity] * decay
+      group.position.set((Math.random() - 0.5) * magnitude, (Math.random() - 0.5) * magnitude, 0)
+    } else {
+      group.position.set(0, 0, 0)
+    }
+  })
+
+  return <group ref={groupRef}>{children}</group>
+}
 
 /** Low sun outside the window, raking warm light through the room toward the camera. */
 function SunLight() {
@@ -85,7 +126,13 @@ function RoomShell() {
   )
 }
 
-export function OfficeSceneContents({ gameState }: { gameState?: GameState }) {
+export function OfficeSceneContents({
+  gameState,
+  effectsIntensity = "strong",
+}: {
+  gameState?: GameState
+  effectsIntensity?: EffectsIntensity
+}) {
   const playerVisual = gameState
     ? deriveCharacterVisual(gameState.fighters.player, gameState.documentOwner === "player", gameState.now)
     : { pose: "idle-hold" as const, flash: null, flashAt: 0 }
@@ -98,6 +145,7 @@ export function OfficeSceneContents({ gameState }: { gameState?: GameState }) {
       <fog attach="fog" args={["#3a2a40", 6, 20]} />
 
       <SunLight />
+      <ScreenShake gameState={gameState} intensity={effectsIntensity}>
       <RoomShell />
       <Window position={[4.2, 0, -1.3]} rotation={[0, -Math.PI / 2, 0]} />
       <LightShafts />
@@ -137,6 +185,7 @@ export function OfficeSceneContents({ gameState }: { gameState?: GameState }) {
         flash={opponentVisual.flash}
         flashKey={opponentVisual.flashAt}
       />
+      </ScreenShake>
     </>
   )
 }
