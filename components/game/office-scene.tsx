@@ -17,13 +17,13 @@ import {
 } from "@/components/game/office-props"
 import { getToonGradientMap } from "@/lib/three-toon"
 import { deriveCharacterVisual } from "@/lib/game/character-action"
-import { SHAKE_DECAY_MS, SHAKE_MAGNITUDE } from "@/lib/game/constants"
+import { SHAKE_MAGNITUDE, SHAKE_SAN_THRESHOLD } from "@/lib/game/constants"
 import type { EffectsIntensity, GameState } from "@/lib/game/types"
 
 /**
- * Nudges its children with a short decaying random offset whenever a fresh hit lands
- * (toss / block / parry), then settles back to rest. Purely a render-side effect —
- * the actual gameplay pause happens in the engine's hitstop window.
+ * Continuous nervous tremor tied to the player's SAN: off above the threshold, then
+ * ramps up (quadratically) as SAN approaches 0. Layered sines give an organic shake
+ * instead of per-frame white noise.
  */
 function ScreenShake({
   gameState,
@@ -35,25 +35,32 @@ function ScreenShake({
   children: React.ReactNode
 }) {
   const groupRef = useRef<THREE.Group>(null)
-  const lastHitAtRef = useRef(0)
+  const strengthRef = useRef(0)
 
-  useFrame(() => {
+  useFrame(({ clock }, delta) => {
     const group = groupRef.current
     if (!group) return
 
-    if (gameState) {
-      const hitAt = Math.max(gameState.fighters.player.lastActionAt, gameState.fighters.opponent.lastActionAt)
-      if (hitAt > lastHitAtRef.current) lastHitAtRef.current = hitAt
+    const san = gameState?.isRunning ? gameState.fighters.player.san : 100
+    const severity = Math.max(0, (SHAKE_SAN_THRESHOLD - san) / SHAKE_SAN_THRESHOLD)
+    const target = severity * severity * SHAKE_MAGNITUDE[intensity]
+    strengthRef.current = THREE.MathUtils.damp(strengthRef.current, target, 6, delta)
+
+    const s = strengthRef.current
+    if (s < 0.0005) {
+      group.position.set(0, 0, 0)
+      group.rotation.z = 0
+      return
     }
 
-    const elapsed = (gameState?.now ?? 0) - lastHitAtRef.current
-    if (lastHitAtRef.current > 0 && elapsed >= 0 && elapsed < SHAKE_DECAY_MS) {
-      const decay = 1 - elapsed / SHAKE_DECAY_MS
-      const magnitude = SHAKE_MAGNITUDE[intensity] * decay
-      group.position.set((Math.random() - 0.5) * magnitude, (Math.random() - 0.5) * magnitude, 0)
-    } else {
-      group.position.set(0, 0, 0)
-    }
+    const t = clock.elapsedTime
+    const freq = 18 + severity * 22
+    group.position.set(
+      (Math.sin(t * freq) + Math.sin(t * freq * 1.73 + 1.3) * 0.6) * s,
+      (Math.sin(t * freq * 1.31 + 2.1) + Math.sin(t * freq * 2.07) * 0.5) * s,
+      0,
+    )
+    group.rotation.z = Math.sin(t * freq * 0.87 + 0.7) * s * 0.25
   })
 
   return <group ref={groupRef}>{children}</group>

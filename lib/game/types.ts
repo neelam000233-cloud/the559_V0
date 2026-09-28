@@ -62,8 +62,8 @@ export interface GameState {
   fighters: Record<PlayerId, FighterState>
   outcome: MatchOutcome | null
   log: { id: number; text: string; owner: PlayerId | null }[]
-  /** While `now < hitstopUntil`, the simulation clock freezes to sell impact (screen-shake window). */
-  hitstopUntil: number | null
+  /** Real-time ms left in the impact freeze; the simulation clock is paused while > 0. */
+  hitstopRemainingMs: number
 }
 
 export interface MatchConfig {

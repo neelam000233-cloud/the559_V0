@@ -63,7 +63,7 @@ export class GameEngine {
       },
       outcome: null,
       log: [],
-      hitstopUntil: null,
+      hitstopRemainingMs: 0,
     }
   }
 
@@ -113,13 +113,11 @@ export class GameEngine {
   tick(dtMs: number) {
     if (!this.state.isRunning || this.state.isPaused || this.state.outcome) return
 
-    if (this.state.hitstopUntil !== null) {
-      if (this.state.now < this.state.hitstopUntil) {
-        // Frozen: don't advance the clock or simulate, just let animations react to the fresh hit.
-        this.emit()
-        return
-      }
-      this.state.hitstopUntil = null
+    if (this.state.hitstopRemainingMs > 0) {
+      // Count down with real frame time: the sim clock is frozen, so it can't be used to end the freeze.
+      this.state.hitstopRemainingMs = Math.max(0, this.state.hitstopRemainingMs - dtMs)
+      this.emit()
+      return
     }
 
     this.state.now += dtMs
@@ -277,7 +275,7 @@ export class GameEngine {
   }
 
   private triggerHitstop() {
-    this.state.hitstopUntil = this.state.now + HITSTOP_MS[this.config.effectsIntensity]
+    this.state.hitstopRemainingMs = HITSTOP_MS[this.config.effectsIntensity]
   }
 
   /** Update the screen-shake / hitstop strength from the Settings panel without resetting the match. */

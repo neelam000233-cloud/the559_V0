@@ -27,14 +27,14 @@ export const HITSTOP_MS: Record<EffectsIntensity, number> = {
   weak: 45,
 }
 
-/** Screen-shake magnitude (world units) applied while the impact is fresh. */
+/** Max camera tremor (world units) reached at SAN 0. */
 export const SHAKE_MAGNITUDE: Record<EffectsIntensity, number> = {
-  strong: 0.05,
-  weak: 0.018,
+  strong: 0.09,
+  weak: 0.035,
 }
 
-/** How long after an impact the shake keeps decaying, in ms. */
-export const SHAKE_DECAY_MS = 220
+/** Tremor starts once the player's SAN drops below this value and grows as SAN falls. */
+export const SHAKE_SAN_THRESHOLD = 40
 
 export const TOTAL_ABILITY_POINTS = 10
 export const ABILITY_KEYS: AbilityKey[] = [
