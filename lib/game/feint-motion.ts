@@ -13,6 +13,8 @@ export interface FeintMotion {
   armPitch: number
   armSpread: number
   throwArm: number
+  /** Extra elbow bend on both arms (radians); the throwing arm gets additional wind-up bend from `throwArm`. */
+  elbow: number
   docSide: number
   docUp: number
   docForward: number
@@ -29,6 +31,7 @@ export const ZERO_FEINT_MOTION: FeintMotion = {
   armPitch: 0,
   armSpread: 0,
   throwArm: 0,
+  elbow: 0,
   docSide: 0,
   docUp: 0,
   docForward: 0,
@@ -51,9 +54,10 @@ export function feintMotion(variant: FeintVariant, t: number): FeintMotion {
       return {
         ...ZERO_FEINT_MOTION,
         forward: 0.32 * e,
-        torsoLean: -0.42 * e,
+        torsoLean: -0.5 * e,
         armPitch: 0.5 * e,
         throwArm: 0.9 * e,
+        elbow: 0.7 * e,
         docForward: 0.7 * e,
         docUp: 0.18 * e,
         energy: e,
@@ -66,9 +70,10 @@ export function feintMotion(variant: FeintVariant, t: number): FeintMotion {
       return {
         ...ZERO_FEINT_MOTION,
         forward: 0.28 * e,
-        torsoLean: -0.36 * e,
+        torsoLean: -0.44 * e,
         armPitch: 0.45 * e,
         throwArm: 0.8 * e,
+        elbow: 0.6 * e,
         docForward: 0.6 * e,
         docUp: 0.14 * e,
         energy: e,
@@ -83,9 +88,10 @@ export function feintMotion(variant: FeintVariant, t: number): FeintMotion {
         forward: 0.1 * e,
         shiftX: 0.38 * s * e,
         twist: 0.65 * s * e,
-        torsoLean: -0.12 * e,
+        torsoLean: -0.26 * e,
         armSpread: 0.28 * e,
         throwArm: 0.35 * e,
+        elbow: 0.55 * e,
         docSide: 0.62 * s * e,
         docForward: 0.28 * e,
         docUp: 0.06 * e,
@@ -99,8 +105,9 @@ export function feintMotion(variant: FeintVariant, t: number): FeintMotion {
       return {
         ...ZERO_FEINT_MOTION,
         crouchY: 0.07 * e,
-        torsoLean: 0.24 * e - snap * 0.5,
+        torsoLean: 0.18 * e - snap * 0.8,
         armPitch: 1.75 * e,
+        elbow: 0.9 * e - snap * 0.6,
         forward: snap * 0.3,
         docUp: 0.85 * e,
         docForward: 0.1 * e + snap * 0.5,
@@ -113,8 +120,9 @@ export function feintMotion(variant: FeintVariant, t: number): FeintMotion {
       return {
         ...ZERO_FEINT_MOTION,
         crouchY: -0.24 * dip + 0.08 * spring,
-        torsoLean: -0.34 * dip - 0.2 * spring,
+        torsoLean: -0.45 * dip - 0.3 * spring,
         armPitch: -0.35 * dip + 0.6 * spring,
+        elbow: 1.0 * dip + 0.3 * spring,
         forward: 0.12 * dip + 0.26 * spring,
         throwArm: 0.5 * spring,
         docUp: -0.22 * dip + 0.3 * spring,
