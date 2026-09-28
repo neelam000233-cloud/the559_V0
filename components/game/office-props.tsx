@@ -242,19 +242,19 @@ export function Window({
 /** Thin additive light-shaft planes fanning from the side window across to the desk. */
 export function LightShafts() {
   const shafts: Array<{ position: [number, number, number]; rotation: [number, number, number]; scaleY: number }> = [
-    { position: [3.2, 1.95, -1.9], rotation: [0.06, 0.06, 1.84], scaleY: 1 },
-    { position: [1.9, 1.6, -1.3], rotation: [0, 0, 1.84], scaleY: 1.1 },
-    { position: [0.7, 1.25, -0.7], rotation: [-0.06, -0.06, 1.84], scaleY: 1 },
+    { position: [3.2, 2.45, -1.9], rotation: [0.06, 0.06, 1.84], scaleY: 1 },
+    { position: [1.9, 2.05, -1.3], rotation: [0, 0, 1.84], scaleY: 1.1 },
+    { position: [0.7, 1.65, -0.7], rotation: [-0.06, -0.06, 1.84], scaleY: 1 },
   ]
   return (
     <group>
       {shafts.map((s, i) => (
         <mesh key={i} position={s.position} rotation={s.rotation} scale={[1, s.scaleY, 1]}>
-          <planeGeometry args={[0.55, 6]} />
+          <planeGeometry args={[1.1, 6]} />
           <meshBasicMaterial
             color="#ffb066"
             transparent
-            opacity={0.11}
+            opacity={0.09}
             toneMapped={false}
             blending={THREE.AdditiveBlending}
             depthWrite={false}

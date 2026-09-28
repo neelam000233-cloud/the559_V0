@@ -31,7 +31,7 @@ function SunLight() {
     <>
       <directionalLight
         ref={lightRef}
-        position={[6.5, 2.7, -1.3]}
+        position={[6.5, 4.3, -1.3]}
         intensity={4.2}
         color="#ff9152"
         castShadow
