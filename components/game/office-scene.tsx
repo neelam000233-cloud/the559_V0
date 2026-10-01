@@ -40,6 +40,8 @@ function ScreenShake({
   const impactRef = useRef(0)
   const impactDecayRef = useRef(9)
   const impactAgeRef = useRef(CAMERA_EFFECT_SECONDS)
+  const sanAgeRef = useRef(CAMERA_EFFECT_SECONDS)
+  const lastSanRef = useRef(100)
   const lastEventId = useRef<number | null>(gameState?.documentEvent?.id ?? null)
 
   useFrame(({ clock }, delta) => {
@@ -60,8 +62,12 @@ function ScreenShake({
     if (impactAgeRef.current >= CAMERA_EFFECT_SECONDS) impactRef.current = 0
 
     const san = gameState?.isRunning ? gameState.fighters.player.san : 100
+    if (san < SHAKE_SAN_THRESHOLD && san < lastSanRef.current) sanAgeRef.current = 0
+    lastSanRef.current = san
+    sanAgeRef.current += delta
+    const sanFade = Math.max(0, 1 - sanAgeRef.current / CAMERA_EFFECT_SECONDS)
     const severity = Math.max(0, (SHAKE_SAN_THRESHOLD - san) / SHAKE_SAN_THRESHOLD)
-    const target = severity * severity * SHAKE_MAGNITUDE[intensity]
+    const target = severity * severity * SHAKE_MAGNITUDE[intensity] * sanFade
     strengthRef.current = THREE.MathUtils.damp(strengthRef.current, target, 6, delta)
 
     const s = Math.max(strengthRef.current, impactRef.current)
