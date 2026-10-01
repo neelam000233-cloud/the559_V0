@@ -45,6 +45,9 @@ export const DEFENSE_SHAKE_DECAY: Record<"block" | "parry", number> = {
   parry: 6,
 }
 
+/** Event-driven camera effects (defense shake, feint follow/zoom) never run longer than this. */
+export const CAMERA_EFFECT_SECONDS = 1
+
 /** SAN below which the dissolving black vignette starts closing in. */
 export const VIGNETTE_SAN_THRESHOLD = 30
 

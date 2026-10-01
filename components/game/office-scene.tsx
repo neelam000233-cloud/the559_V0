@@ -18,7 +18,7 @@ import {
 import { getToonGradientMap } from "@/lib/three-toon"
 import { deriveCharacterVisual, IDLE_VISUAL } from "@/lib/game/character-action"
 import { feintDocWorldOffset, fighterFeintMotion } from "@/lib/game/feint-motion"
-import { DEFENSE_SHAKE_DECAY, DEFENSE_SHAKE_MAGNITUDE, SHAKE_MAGNITUDE, SHAKE_SAN_THRESHOLD } from "@/lib/game/constants"
+import { CAMERA_EFFECT_SECONDS, DEFENSE_SHAKE_DECAY, DEFENSE_SHAKE_MAGNITUDE, SHAKE_MAGNITUDE, SHAKE_SAN_THRESHOLD } from "@/lib/game/constants"
 import type { EffectsIntensity, GameState } from "@/lib/game/types"
 
 /**
@@ -39,6 +39,7 @@ function ScreenShake({
   const strengthRef = useRef(0)
   const impactRef = useRef(0)
   const impactDecayRef = useRef(9)
+  const impactAgeRef = useRef(CAMERA_EFFECT_SECONDS)
   const lastEventId = useRef<number | null>(gameState?.documentEvent?.id ?? null)
 
   useFrame(({ clock }, delta) => {
@@ -51,9 +52,12 @@ function ScreenShake({
       if (event.to === "player" && (event.kind === "block" || event.kind === "parry")) {
         impactRef.current = DEFENSE_SHAKE_MAGNITUDE[event.kind][intensity]
         impactDecayRef.current = DEFENSE_SHAKE_DECAY[event.kind]
+        impactAgeRef.current = 0
       }
     }
+    impactAgeRef.current += delta
     impactRef.current *= Math.exp(-impactDecayRef.current * delta)
+    if (impactAgeRef.current >= CAMERA_EFFECT_SECONDS) impactRef.current = 0
 
     const san = gameState?.isRunning ? gameState.fighters.player.san : 100
     const severity = Math.max(0, (SHAKE_SAN_THRESHOLD - san) / SHAKE_SAN_THRESHOLD)
@@ -89,7 +93,8 @@ function FeintCameraFollow({ gameState, intensity }: { gameState?: GameState; in
   const offsetRef = useRef(new THREE.Vector3())
   const lookRef = useRef(new THREE.Vector3())
   const zoomRef = useRef(0)
-  const lookBase = useRef(new THREE.Vector3(1.5, 1.0, -1.6))
+  const ageRef = useRef({ player: 0, opponent: 0 })
+  const lookBase = useRef(new THREE.Vector3(0.5, 1.0, -1.6))
 
   useFrame(({ camera }, delta) => {
     const cam = camera as THREE.PerspectiveCamera
@@ -103,10 +108,16 @@ function FeintCameraFollow({ gameState, intensity }: { gameState?: GameState; in
       const scale = intensity === "strong" ? 1 : 0.45
       for (const id of ["player", "opponent"] as const) {
         const m = fighterFeintMotion(gameState, id)
-        if (m.energy <= 0) continue
+        if (m.energy <= 0) {
+          ageRef.current[id] = 0
+          continue
+        }
+        ageRef.current[id] += delta
+        const remaining = CAMERA_EFFECT_SECONDS - ageRef.current[id]
+        if (remaining <= 0) continue
         const [dx, dy, dz] = feintDocWorldOffset(m, id)
         // Opponent is far away, so their fakes need a bigger camera push to read.
-        const w = (id === "opponent" ? 1.25 : 0.8) * scale
+        const w = (id === "opponent" ? 1.25 : 0.8) * scale * Math.min(1, remaining / 0.2)
         target.x += (dx * 0.55 + (id === "player" ? m.shiftX : -m.shiftX) * 0.5) * w
         target.y += dy * 0.25 * w
         target.z += (id === "opponent" ? -0.35 : -0.18) * m.energy * w

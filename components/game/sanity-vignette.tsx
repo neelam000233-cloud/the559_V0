@@ -9,13 +9,14 @@ export function SanityVignette({ san }: { san: number }) {
   const severity = Math.min(1, Math.max(0, (VIGNETTE_SAN_THRESHOLD - san) / VIGNETTE_SAN_THRESHOLD))
   if (severity <= 0) return null
 
-  const clearRadius = 78 - severity * 52
-  const hazeRadius = clearRadius + 14 + severity * 6
-  const rimOpacity = 0.55 + severity * 0.45
+  const clearRadius = 62 - severity * 50
+  const hazeRadius = clearRadius + 12 + severity * 4
+  const rimOpacity = 0.8 + severity * 0.2
 
   const background = [
-    `radial-gradient(ellipse at center, rgba(0,0,0,0) ${clearRadius}%, rgba(0,0,0,${rimOpacity * 0.55}) ${hazeRadius}%, rgba(0,0,0,${rimOpacity}) 100%)`,
-    `radial-gradient(ellipse at center, rgba(0,0,0,0) ${clearRadius + 10}%, rgba(0,0,0,${rimOpacity}) 120%)`,
+    `radial-gradient(ellipse at center, rgba(0,0,0,0) ${clearRadius}%, rgba(0,0,0,${rimOpacity * 0.7}) ${hazeRadius}%, rgba(0,0,0,${rimOpacity}) 100%)`,
+    `radial-gradient(ellipse at center, rgba(0,0,0,0) ${clearRadius + 6}%, rgba(0,0,0,${rimOpacity}) 100%)`,
+    `radial-gradient(ellipse at center, rgba(0,0,0,0) ${clearRadius + 20}%, rgba(0,0,0,1) 112%)`,
   ].join(", ")
 
   return (
