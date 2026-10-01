@@ -18,7 +18,7 @@ import {
 import { getToonGradientMap } from "@/lib/three-toon"
 import { deriveCharacterVisual, IDLE_VISUAL } from "@/lib/game/character-action"
 import { feintDocWorldOffset, fighterFeintMotion } from "@/lib/game/feint-motion"
-import { SHAKE_MAGNITUDE, SHAKE_SAN_THRESHOLD } from "@/lib/game/constants"
+import { DEFENSE_SHAKE_DECAY, DEFENSE_SHAKE_MAGNITUDE, SHAKE_MAGNITUDE, SHAKE_SAN_THRESHOLD } from "@/lib/game/constants"
 import type { EffectsIntensity, GameState } from "@/lib/game/types"
 
 /**
@@ -37,17 +37,30 @@ function ScreenShake({
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const strengthRef = useRef(0)
+  const impactRef = useRef(0)
+  const impactDecayRef = useRef(9)
+  const lastEventId = useRef<number | null>(gameState?.documentEvent?.id ?? null)
 
   useFrame(({ clock }, delta) => {
     const group = groupRef.current
     if (!group) return
+
+    const event = gameState?.documentEvent
+    if (event && event.id !== lastEventId.current) {
+      lastEventId.current = event.id
+      if (event.to === "player" && (event.kind === "block" || event.kind === "parry")) {
+        impactRef.current = DEFENSE_SHAKE_MAGNITUDE[event.kind][intensity]
+        impactDecayRef.current = DEFENSE_SHAKE_DECAY[event.kind]
+      }
+    }
+    impactRef.current *= Math.exp(-impactDecayRef.current * delta)
 
     const san = gameState?.isRunning ? gameState.fighters.player.san : 100
     const severity = Math.max(0, (SHAKE_SAN_THRESHOLD - san) / SHAKE_SAN_THRESHOLD)
     const target = severity * severity * SHAKE_MAGNITUDE[intensity]
     strengthRef.current = THREE.MathUtils.damp(strengthRef.current, target, 6, delta)
 
-    const s = strengthRef.current
+    const s = Math.max(strengthRef.current, impactRef.current)
     if (s < 0.0005) {
       group.position.set(0, 0, 0)
       group.rotation.z = 0
@@ -55,7 +68,7 @@ function ScreenShake({
     }
 
     const t = clock.elapsedTime
-    const freq = 18 + severity * 22
+    const freq = impactRef.current > strengthRef.current ? 34 : 18 + severity * 22
     group.position.set(
       (Math.sin(t * freq) + Math.sin(t * freq * 1.73 + 1.3) * 0.6) * s,
       (Math.sin(t * freq * 1.31 + 2.1) + Math.sin(t * freq * 2.07) * 0.5) * s,
@@ -76,7 +89,7 @@ function FeintCameraFollow({ gameState, intensity }: { gameState?: GameState; in
   const offsetRef = useRef(new THREE.Vector3())
   const lookRef = useRef(new THREE.Vector3())
   const zoomRef = useRef(0)
-  const lookBase = useRef(new THREE.Vector3(1, 1.0, -1.6))
+  const lookBase = useRef(new THREE.Vector3(1.5, 1.0, -1.6))
 
   useFrame(({ camera }, delta) => {
     const cam = camera as THREE.PerspectiveCamera

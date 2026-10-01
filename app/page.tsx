@@ -5,6 +5,7 @@ import * as THREE from "three"
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { OfficeSceneContents } from "@/components/game/office-scene"
+import { SanityVignette } from "@/components/game/sanity-vignette"
 import { GameHud } from "@/components/game/hud"
 import { useGameEngine } from "@/hooks/use-game-engine"
 import type { AIDifficulty, EffectsIntensity } from "@/lib/game/types"
@@ -29,7 +30,7 @@ export default function Page() {
     <main className="relative h-screen w-screen overflow-hidden bg-[#140f1a]">
       <Canvas
         shadows
-        camera={{ position: [3, 2.0, 2.5], fov: 45, near: 0.1, far: 40 }}
+        camera={{ position: [2.5, 2.0, 2.5], fov: 45, near: 0.1, far: 40 }}
         gl={{ antialias: true }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping
@@ -52,6 +53,8 @@ export default function Page() {
           dampingFactor={0.08}
         />
       </Canvas>
+
+      {state.isRunning && <SanityVignette san={state.fighters.player.san} />}
 
       {!showStartScreen && (
         <GameHud state={state} onTogglePause={() => setPaused(!state.isPaused)} onOpenSettings={() => setShowSettings(true)} />

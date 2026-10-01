@@ -33,6 +33,21 @@ export const SHAKE_MAGNITUDE: Record<EffectsIntensity, number> = {
   weak: 0.035,
 }
 
+/** One-shot frame shake (world units) when the player defends successfully. */
+export const DEFENSE_SHAKE_MAGNITUDE: Record<"block" | "parry", Record<EffectsIntensity, number>> = {
+  block: { strong: 0.08, weak: 0.03 },
+  parry: { strong: 0.24, weak: 0.1 },
+}
+
+/** Exponential decay rate (1/s) of the defense shake; lower = lingers longer. */
+export const DEFENSE_SHAKE_DECAY: Record<"block" | "parry", number> = {
+  block: 9,
+  parry: 6,
+}
+
+/** SAN below which the dissolving black vignette starts closing in. */
+export const VIGNETTE_SAN_THRESHOLD = 30
+
 /** Tremor starts once the player's SAN drops below this value and grows as SAN falls. */
 export const SHAKE_SAN_THRESHOLD = 40
 
