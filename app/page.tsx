@@ -30,7 +30,7 @@ export default function Page() {
     <main className="relative h-screen w-screen overflow-hidden bg-[#140f1a]">
       <Canvas
         shadows
-        camera={{ position: [2.5, 2.0, 2.5], fov: 45, near: 0.1, far: 40 }}
+        camera={{ position: [1.99, 1.8, 1.66], fov: 45, near: 0.1, far: 40 }}
         gl={{ antialias: true }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping
