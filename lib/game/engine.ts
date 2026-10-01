@@ -13,6 +13,7 @@ import {
   FEINT_VARIANTS,
   BASE_ATTACK_DAMAGE,
   BASE_HEAT_GAIN_RATIO,
+  BLOCKED_ATTACKER_PENALTY,
   BASE_PARRY_WINDOW_MS,
   DOUBLE_LOSS_HEAT_THRESHOLD,
   DOUBLE_LOSS_SAN_THRESHOLD,
@@ -252,6 +253,16 @@ export class GameEngine {
     return { san: Math.max(0, san), heat: Math.max(0, heat) }
   }
 
+  private penalizeBlockedAttacker(attacker: FighterState, kind: "block" | "parry") {
+    const { san, heat } = BLOCKED_ATTACKER_PENALTY[kind]
+    const sanLoss = Math.min(attacker.san, san)
+    const heatGain = Math.min(MAX_HEAT - attacker.heat, heat)
+    attacker.san -= sanLoss
+    attacker.heat += heatGain
+    attacker.stats.sanLost += sanLoss
+    attacker.stats.heatGained += heatGain
+  }
+
   private attemptAttack(attackerId: PlayerId) {
     const defenderId = OPPONENT_OF[attackerId]
     const attacker = this.state.fighters[attackerId]
@@ -267,6 +278,7 @@ export class GameEngine {
       defender.lastActionLabel = "PARRY!"
       defender.lastActionAt = this.state.now
       attacker.lastActionLabel = null
+      this.penalizeBlockedAttacker(attacker, "parry")
       this.pushLog("Parry! Document bounced back", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
@@ -282,6 +294,7 @@ export class GameEngine {
       defender.lastActionAt = this.state.now
       this.state.documentOwner = defenderId
       this.pushDocumentEvent("block", attackerId, defenderId)
+      this.penalizeBlockedAttacker(attacker, "block")
       this.pushLog("Blocked! Damage reduced, document transferred", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()

@@ -21,6 +21,12 @@ export const TAP_GUARD_MS = 60
 export const BASE_ATTACK_DAMAGE = 12
 export const BASE_HEAT_GAIN_RATIO = 0.65
 
+/** Small SAN loss / HEAT gain applied to an attacker whose toss was blocked or parried. */
+export const BLOCKED_ATTACKER_PENALTY = {
+  block: { san: 2, heat: 3 },
+  parry: { san: 4, heat: 6 },
+} as const
+
 /** Brief simulation freeze on impact (toss / block / parry) to sell the hit. */
 export const HITSTOP_MS: Record<EffectsIntensity, number> = {
   strong: 110,
