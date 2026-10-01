@@ -1,4 +1,4 @@
-import type { AbilityKey, AIDifficulty, Abilities, EffectsIntensity } from "./types"
+import type { AbilityKey, AIDifficulty, Abilities, EffectsIntensity, FeintVariant } from "./types"
 
 export const MATCH_DURATION_MS = 3 * 60 * 1000
 
@@ -21,6 +21,12 @@ export const TAP_GUARD_MS = 60
 export const BASE_ATTACK_DAMAGE = 12
 export const BASE_HEAT_GAIN_RATIO = 0.65
 
+/** Small SAN loss / HEAT gain applied to an attacker whose toss was blocked or parried. */
+export const BLOCKED_ATTACKER_PENALTY = {
+  block: { san: 2, heat: 3 },
+  parry: { san: 4, heat: 6 },
+} as const
+
 /** Brief simulation freeze on impact (toss / block / parry) to sell the hit. */
 export const HITSTOP_MS: Record<EffectsIntensity, number> = {
   strong: 110,
@@ -33,8 +39,53 @@ export const SHAKE_MAGNITUDE: Record<EffectsIntensity, number> = {
   weak: 0.035,
 }
 
+/** One-shot frame shake (world units) when the player defends successfully. */
+export const DEFENSE_SHAKE_MAGNITUDE: Record<"block" | "parry", Record<EffectsIntensity, number>> = {
+  block: { strong: 0.08, weak: 0.03 },
+  parry: { strong: 0.24, weak: 0.1 },
+}
+
+/** Exponential decay rate (1/s) of the defense shake; lower = lingers longer. */
+export const DEFENSE_SHAKE_DECAY: Record<"block" | "parry", number> = {
+  block: 9,
+  parry: 6,
+}
+
+/** Event-driven camera effects (defense shake, feint follow/zoom) never run longer than this. */
+export const CAMERA_EFFECT_SECONDS = 1
+
+/** SAN below which the dissolving black vignette starts closing in. */
+export const VIGNETTE_SAN_THRESHOLD = 30
+
 /** Tremor starts once the player's SAN drops below this value and grows as SAN falls. */
 export const SHAKE_SAN_THRESHOLD = 40
+
+export const FEINT_VARIANTS: FeintVariant[] = [
+  "pump",
+  "double-pump",
+  "sidestep-left",
+  "sidestep-right",
+  "overhead",
+  "crouch-spring",
+]
+
+export const FEINT_DURATION_MS: Record<FeintVariant, number> = {
+  pump: 380,
+  "double-pump": 580,
+  "sidestep-left": 460,
+  "sidestep-right": 460,
+  overhead: 540,
+  "crouch-spring": 520,
+}
+
+/** Gap after a feint ends before another one can start. */
+export const FEINT_RECOVERY_MS = 260
+
+/** How strongly the camera chases a feint (fraction of the document's feint offset). */
+export const FEINT_CAMERA_FOLLOW: Record<EffectsIntensity, number> = {
+  strong: 0.55,
+  weak: 0.25,
+}
 
 export const TOTAL_ABILITY_POINTS = 10
 export const ABILITY_KEYS: AbilityKey[] = [

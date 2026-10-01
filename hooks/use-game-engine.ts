@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useSyncExternalStore } from "react"
 import { GameEngine, createDefaultConfig } from "@/lib/game/engine"
+import { playSfx } from "@/lib/game/sfx"
 import type { GameState, MatchConfig } from "@/lib/game/types"
 
 /**
@@ -21,6 +22,17 @@ export function useGameEngine(config?: Partial<MatchConfig>) {
     () => engine.getState(),
     () => engine.getState(),
   )
+
+  const lastSfxEventId = useRef<number | null>(state.documentEvent?.id ?? null)
+  useEffect(() => {
+    const event = state.documentEvent
+    if (!event || event.id === lastSfxEventId.current) return
+    lastSfxEventId.current = event.id
+    const playerAttacked = event.from === "player"
+    if (event.kind === "toss") playSfx(playerAttacked ? "toss" : "gotHit")
+    else if (playerAttacked) playSfx("countered")
+    else playSfx(event.kind === "parry" ? "parry" : "block")
+  }, [state.documentEvent])
 
   useEffect(() => {
     let raf = 0

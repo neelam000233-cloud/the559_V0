@@ -1,4 +1,4 @@
-import type { FighterState } from "./types"
+import type { FeintVariant, FighterState } from "./types"
 
 /** Body pose the character should be lerping toward this frame. */
 export type CharacterPose = "idle-hold" | "idle-wait" | "guard-parry" | "guard-block" | "feint"
@@ -11,9 +11,19 @@ export interface CharacterVisual {
   flash: CharacterFlash
   /** Timestamp (engine ms) the flash started — used as a React key to retrigger the animation. */
   flashAt: number
+  feintVariant: FeintVariant | null
+  /** 0-1 progress through the active feint, or null when not feinting. */
+  feintProgress: number | null
 }
 
 const FLASH_WINDOW_MS = 260
+
+export const IDLE_VISUAL: Omit<CharacterVisual, "pose"> = {
+  flash: null,
+  flashAt: 0,
+  feintVariant: null,
+  feintProgress: null,
+}
 
 /** Derives the current pose + flash feedback for one fighter from raw engine state. */
 export function deriveCharacterVisual(fighter: FighterState, isDocumentOwner: boolean, now: number): CharacterVisual {
@@ -48,5 +58,17 @@ export function deriveCharacterVisual(fighter: FighterState, isDocumentOwner: bo
     }
   }
 
-  return { pose, flash, flashAt: fighter.lastActionAt }
+  let feintProgress: number | null = null
+  if (fighter.isFeinting && fighter.feintVariant) {
+    const span = Math.max(1, fighter.feintUntil - fighter.feintStartedAt)
+    feintProgress = Math.min(1, Math.max(0, (now - fighter.feintStartedAt) / span))
+  }
+
+  return {
+    pose,
+    flash,
+    flashAt: fighter.lastActionAt,
+    feintVariant: fighter.isFeinting ? fighter.feintVariant : null,
+    feintProgress,
+  }
 }

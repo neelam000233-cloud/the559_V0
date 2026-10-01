@@ -21,6 +21,18 @@ export interface Abilities {
 
 export type AbilityKey = keyof Abilities
 
+export type FeintVariant = "pump" | "double-pump" | "sidestep-left" | "sidestep-right" | "overhead" | "crouch-spring"
+
+export type DocumentEventKind = "toss" | "block" | "parry"
+
+/** A discrete document movement, keyed by a unique id so the renderer can animate each one exactly once. */
+export interface DocumentEvent {
+  id: number
+  kind: DocumentEventKind
+  from: PlayerId
+  to: PlayerId
+}
+
 /** What the defender was doing at the instant they were attacked. */
 export type CombatPhase = "idle" | "parryWindow" | "defending" | "cooldown"
 
@@ -36,6 +48,9 @@ export interface FighterState {
   combo: number
   isFeinting: boolean
   feintCooldownUntil: number | null
+  feintVariant: FeintVariant | null
+  feintStartedAt: number
+  feintUntil: number
   lastActionLabel: string | null
   lastActionAt: number
   hasAttackedThisPress: boolean
@@ -64,6 +79,7 @@ export interface GameState {
   log: { id: number; text: string; owner: PlayerId | null }[]
   /** Real-time ms left in the impact freeze; the simulation clock is paused while > 0. */
   hitstopRemainingMs: number
+  documentEvent: DocumentEvent | null
 }
 
 export interface MatchConfig {

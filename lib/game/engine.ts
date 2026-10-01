@@ -1,7 +1,19 @@
-import type { Abilities, FighterState, GameState, MatchConfig, PlayerId } from "./types"
+import type {
+  Abilities,
+  DocumentEventKind,
+  FeintVariant,
+  FighterState,
+  GameState,
+  MatchConfig,
+  PlayerId,
+} from "./types"
 import {
+  FEINT_DURATION_MS,
+  FEINT_RECOVERY_MS,
+  FEINT_VARIANTS,
   BASE_ATTACK_DAMAGE,
   BASE_HEAT_GAIN_RATIO,
+  BLOCKED_ATTACKER_PENALTY,
   BASE_PARRY_WINDOW_MS,
   DOUBLE_LOSS_HEAT_THRESHOLD,
   DOUBLE_LOSS_SAN_THRESHOLD,
@@ -14,6 +26,12 @@ import {
 const OPPONENT_OF: Record<PlayerId, PlayerId> = { player: "opponent", opponent: "player" }
 
 let logId = 0
+let documentEventId = 0
+
+function pickFeintVariant(previous: FeintVariant | null): FeintVariant {
+  const pool = FEINT_VARIANTS.filter((v) => v !== previous)
+  return pool[Math.floor(Math.random() * pool.length)]
+}
 
 function createFighter(id: PlayerId, abilities: Abilities): FighterState {
   return {
@@ -28,6 +46,9 @@ function createFighter(id: PlayerId, abilities: Abilities): FighterState {
     combo: 0,
     isFeinting: false,
     feintCooldownUntil: null,
+    feintVariant: null,
+    feintStartedAt: 0,
+    feintUntil: 0,
     lastActionLabel: null,
     lastActionAt: 0,
     hasAttackedThisPress: false,
@@ -64,6 +85,7 @@ export class GameEngine {
       outcome: null,
       log: [],
       hitstopRemainingMs: 0,
+      documentEvent: null,
     }
   }
 
@@ -125,6 +147,8 @@ export class GameEngine {
 
     for (const id of ["player", "opponent"] as PlayerId[]) {
       this.updateDefensePhase(id)
+      const f = this.state.fighters[id]
+      if (f.isFeinting && this.state.now >= f.feintUntil) f.isFeinting = false
     }
 
     this.updateAI()
@@ -204,14 +228,19 @@ export class GameEngine {
     if (!this.state.isRunning || this.state.isPaused || this.state.outcome) return
     if (this.state.documentOwner !== id) return
     if (f.feintCooldownUntil !== null && this.state.now < f.feintCooldownUntil) return
+    const variant = pickFeintVariant(f.feintVariant)
+    const duration = FEINT_DURATION_MS[variant]
     f.isFeinting = true
-    f.feintCooldownUntil = this.state.now + 900
+    f.feintVariant = variant
+    f.feintStartedAt = this.state.now
+    f.feintUntil = this.state.now + duration
+    f.feintCooldownUntil = f.feintUntil + FEINT_RECOVERY_MS
     this.pushLog("Feint!", id)
     this.emit()
-    setTimeout(() => {
-      f.isFeinting = false
-      this.emit()
-    }, 350)
+  }
+
+  private pushDocumentEvent(kind: DocumentEventKind, from: PlayerId, to: PlayerId) {
+    this.state.documentEvent = { id: ++documentEventId, kind, from, to }
   }
 
   private computeDamage(attacker: FighterState, defender: FighterState, mitigated: boolean) {
@@ -224,18 +253,32 @@ export class GameEngine {
     return { san: Math.max(0, san), heat: Math.max(0, heat) }
   }
 
+  private penalizeBlockedAttacker(attacker: FighterState, kind: "block" | "parry") {
+    const { san, heat } = BLOCKED_ATTACKER_PENALTY[kind]
+    const sanLoss = Math.min(attacker.san, san)
+    const heatGain = Math.min(MAX_HEAT - attacker.heat, heat)
+    attacker.san -= sanLoss
+    attacker.heat += heatGain
+    attacker.stats.sanLost += sanLoss
+    attacker.stats.heatGained += heatGain
+  }
+
   private attemptAttack(attackerId: PlayerId) {
     const defenderId = OPPONENT_OF[attackerId]
     const attacker = this.state.fighters[attackerId]
     const defender = this.state.fighters[defenderId]
+    // Committing to a real toss cancels any feint in progress; the document launches from wherever the fake left it.
+    attacker.isFeinting = false
 
     if (defender.phase === "parryWindow") {
+      this.pushDocumentEvent("parry", attackerId, defenderId)
       // Parry success: document bounces back, no damage, combo continues.
       defender.combo += 1
       defender.stats.parriesLanded += 1
       defender.lastActionLabel = "PARRY!"
       defender.lastActionAt = this.state.now
       attacker.lastActionLabel = null
+      this.penalizeBlockedAttacker(attacker, "parry")
       this.pushLog("Parry! Document bounced back", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
@@ -250,6 +293,8 @@ export class GameEngine {
       defender.lastActionLabel = "Blocked (reduced)"
       defender.lastActionAt = this.state.now
       this.state.documentOwner = defenderId
+      this.pushDocumentEvent("block", attackerId, defenderId)
+      this.penalizeBlockedAttacker(attacker, "block")
       this.pushLog("Blocked! Damage reduced, document transferred", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
@@ -266,6 +311,7 @@ export class GameEngine {
       defender.lastActionLabel = "Got hit!"
       defender.lastActionAt = this.state.now
       this.state.documentOwner = defenderId
+      this.pushDocumentEvent("toss", attackerId, defenderId)
       this.pushLog("Blame tossed! Document transferred", attackerId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
@@ -348,7 +394,9 @@ export class GameEngine {
         const shouldFeint = difficulty >= 2 && Math.random() < 0.28 && !ai.isFeinting
         if (shouldFeint) {
           this.handleFeint("opponent")
-          this.aiNextDecisionAt = now + 260 + Math.random() * 200
+          // Let most of the fake play out before deciding again (sometimes tossing mid-feint as a mix-up).
+          const feintSpan = ai.isFeinting ? ai.feintUntil - now : 0
+          this.aiNextDecisionAt = now + feintSpan * (0.55 + Math.random() * 0.6) + 80
           return
         }
         this.aiNextDecisionAt = now + 550 + Math.random() * 650

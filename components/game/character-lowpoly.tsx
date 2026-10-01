@@ -6,6 +6,10 @@ import * as THREE from "three"
 import { Outlines } from "@react-three/drei"
 import { getToonGradientMap, OUTLINE_COLOR } from "@/lib/three-toon"
 import type { CharacterFlash, CharacterPose } from "@/lib/game/character-action"
+import { feintMotion, ZERO_FEINT_MOTION, type FeintMotion } from "@/lib/game/feint-motion"
+import type { FeintVariant } from "@/lib/game/types"
+
+const FEINT_KEYS = Object.keys(ZERO_FEINT_MOTION) as (keyof FeintMotion)[]
 
 /** A single low-poly body part: toon-shaded solid + thick inflated-hull outline. */
 function ToonPart({
@@ -52,17 +56,29 @@ const FLASH_COLOR: Record<Exclude<CharacterFlash, null>, string> = {
 
 const FLASH_DURATION_MS = 320
 
-/** Target local rotations/offsets per pose, lerped toward every frame for a snappy but smooth feel. */
-const POSE_TARGETS: Record<
-  CharacterPose,
-  { armPitch: number; armSpread: number; torsoLean: number; headTilt: number }
-> = {
-  "idle-hold": { armPitch: 1.05, armSpread: 0.12, torsoLean: 0, headTilt: 0 },
-  "idle-wait": { armPitch: 1.3, armSpread: 0.05, torsoLean: 0.03, headTilt: 0 },
-  "guard-parry": { armPitch: 0.55, armSpread: 0.32, torsoLean: -0.09, headTilt: -0.05 },
-  "guard-block": { armPitch: 0.85, armSpread: 0.22, torsoLean: 0.14, headTilt: 0.06 },
-  feint: { armPitch: 0.35, armSpread: 0.4, torsoLean: -0.14, headTilt: -0.08 },
+/** Hip height: the upper body pivots here so forward lean carries the head and arms with it. */
+const HIP_Y = 0.84
+
+interface PoseTarget {
+  armPitch: number
+  armSpread: number
+  /** Whole upper body pitch at the hips; negative leans toward the opponent. */
+  bodyLean: number
+  elbow: number
+  headTilt: number
 }
+
+/** Target local rotations/offsets per pose, lerped toward every frame for a snappy but smooth feel. */
+const POSE_TARGETS: Record<CharacterPose, PoseTarget> = {
+  "idle-hold": { armPitch: 0.95, armSpread: 0.12, bodyLean: -0.06, elbow: 0.45, headTilt: 0 },
+  "idle-wait": { armPitch: 1.1, armSpread: 0.05, bodyLean: -0.03, elbow: 0.35, headTilt: 0 },
+  "guard-parry": { armPitch: 0.7, armSpread: 0.32, bodyLean: -0.3, elbow: 1.35, headTilt: -0.05 },
+  "guard-block": { armPitch: 0.9, armSpread: 0.22, bodyLean: -0.2, elbow: 1.55, headTilt: 0.06 },
+  // Feints are driven by additive per-variant curves (see feint-motion.ts), so the base stays at the hold pose.
+  feint: { armPitch: 0.95, armSpread: 0.12, bodyLean: -0.06, elbow: 0.45, headTilt: 0 },
+}
+
+const POSE_KEYS = Object.keys(POSE_TARGETS["idle-hold"]) as (keyof PoseTarget)[]
 
 interface CharacterProps {
   position: [number, number, number]
@@ -76,6 +92,8 @@ interface CharacterProps {
   flash?: CharacterFlash
   /** Changes whenever a new flash should retrigger (engine timestamp of the event). */
   flashKey?: number
+  feintVariant?: FeintVariant | null
+  feintProgress?: number | null
 }
 
 export function CharacterLowPoly({
@@ -88,6 +106,8 @@ export function CharacterLowPoly({
   pose = "idle-hold",
   flash = null,
   flashKey = 0,
+  feintVariant = null,
+  feintProgress = null,
 }: CharacterProps) {
   const rotY = facing === 1 ? 0 : Math.PI
 
@@ -95,9 +115,13 @@ export function CharacterLowPoly({
   const headRef = useRef<THREE.Group>(null)
   const leftArmRef = useRef<THREE.Group>(null)
   const rightArmRef = useRef<THREE.Group>(null)
+  const leftForearmRef = useRef<THREE.Group>(null)
+  const rightForearmRef = useRef<THREE.Group>(null)
   const lungeRef = useRef<THREE.Group>(null)
+  const upperBodyRef = useRef<THREE.Group>(null)
+  const feintRef = useRef<FeintMotion>({ ...ZERO_FEINT_MOTION })
 
-  const poseRef = useRef({ armPitch: 1.05, armSpread: 0.12, torsoLean: 0, headTilt: 0 })
+  const poseRef = useRef<PoseTarget>({ ...POSE_TARGETS["idle-hold"] })
   const flashElapsedRef = useRef(FLASH_DURATION_MS)
   const activeFlash = useRef<CharacterFlash>(null)
   const lastFlashKey = useRef(flashKey)
@@ -114,30 +138,46 @@ export function CharacterLowPoly({
     const target = POSE_TARGETS[pose]
     const lerpSpeed = pose === "feint" || pose === "guard-parry" ? 14 : 8
     const k = Math.min(1, delta * lerpSpeed)
-    poseRef.current.armPitch += (target.armPitch - poseRef.current.armPitch) * k
-    poseRef.current.armSpread += (target.armSpread - poseRef.current.armSpread) * k
-    poseRef.current.torsoLean += (target.torsoLean - poseRef.current.torsoLean) * k
-    poseRef.current.headTilt += (target.headTilt - poseRef.current.headTilt) * k
+    for (const key of POSE_KEYS) poseRef.current[key] += (target[key] - poseRef.current[key]) * k
 
-    if (leftArmRef.current) leftArmRef.current.rotation.set(poseRef.current.armPitch, 0, poseRef.current.armSpread)
-    if (rightArmRef.current) rightArmRef.current.rotation.set(poseRef.current.armPitch, 0, -poseRef.current.armSpread)
-    if (torsoRef.current) torsoRef.current.rotation.x = poseRef.current.torsoLean
-    if (headRef.current) headRef.current.rotation.x = poseRef.current.headTilt
+    // Feint curves are already eased; a fast follow just hides the pop when a feint is cancelled by a real toss.
+    const targetFeint = feintVariant && feintProgress !== null ? feintMotion(feintVariant, feintProgress) : ZERO_FEINT_MOTION
+    const fk = 1 - Math.exp(-delta * 28)
+    const m = feintRef.current
+    for (const key of FEINT_KEYS) m[key] += (targetFeint[key] - m[key]) * fk
 
+    let punch = 0
     if (flashElapsedRef.current < FLASH_DURATION_MS) {
       flashElapsedRef.current += delta * 1000
-      // Toss attackers get a forward lunge punch that snaps out then eases back.
-      if (lungeRef.current && activeFlash.current === "toss") {
-        const t = Math.min(1, flashElapsedRef.current / FLASH_DURATION_MS)
-        const punch = Math.sin(t * Math.PI) * 0.16
-        lungeRef.current.position.z = -punch
-      }
       const t = Math.min(1, flashElapsedRef.current / FLASH_DURATION_MS)
+      // Toss attackers get a forward lunge punch that snaps out then eases back.
+      if (activeFlash.current === "toss") punch = Math.sin(t * Math.PI) * 0.16
       const flashColor = activeFlash.current ? FLASH_COLOR[activeFlash.current] : OUTLINE_COLOR
-      const mix = 1 - t
-      outlineColorRef.current = mixHexColors(flashColor, OUTLINE_COLOR, mix)
-    } else if (lungeRef.current) {
-      lungeRef.current.position.z = 0
+      outlineColorRef.current = mixHexColors(flashColor, OUTLINE_COLOR, 1 - t)
+    }
+
+    const p = poseRef.current
+    // Throw lunge: upper body pitches hard over the desk while the elbows whip from bent to extended.
+    const lean = p.bodyLean + m.torsoLean - punch * 2.4
+    const elbow = Math.max(0, p.elbow + m.elbow - punch * 2.5)
+    const throwElbow = elbow + m.throwArm * 0.6
+
+    if (leftArmRef.current) leftArmRef.current.rotation.set(p.armPitch + m.armPitch, 0, p.armSpread + m.armSpread)
+    if (rightArmRef.current)
+      rightArmRef.current.rotation.set(p.armPitch + m.armPitch + m.throwArm, 0, -(p.armSpread + m.armSpread))
+    if (leftForearmRef.current) leftForearmRef.current.rotation.x = elbow
+    if (rightForearmRef.current) rightForearmRef.current.rotation.x = throwElbow
+    // A little extra spine curl on top of the hip pivot keeps the lean from looking like a rigid plank.
+    if (torsoRef.current) torsoRef.current.rotation.x = lean * 0.25
+    // Head counter-rotates so the eyes stay on the opponent while leaning.
+    if (headRef.current) headRef.current.rotation.x = p.headTilt - lean * 0.55
+    if (upperBodyRef.current) {
+      upperBodyRef.current.position.y = HIP_Y + m.crouchY
+      upperBodyRef.current.rotation.set(lean, -m.twist, 0)
+    }
+    if (lungeRef.current) {
+      lungeRef.current.position.x = m.shiftX
+      lungeRef.current.position.z = -(punch + m.forward)
     }
   })
 
@@ -164,6 +204,9 @@ export function CharacterLowPoly({
           <boxGeometry args={[0.19, 0.12, 0.32]} />
         </ToonPart>
 
+        {/* upper body: crouches and twists as one unit during feints */}
+        <group ref={upperBodyRef} position={[0, HIP_Y, 0]}>
+        <group position={[0, -HIP_Y, 0]}>
         {/* torso (leans with pose, rim-flashes on combat events) */}
         <group ref={torsoRef} position={[0, 1.05, 0]}>
           <ToonPart color={shirtColor} outlineColor={rimColor} position={[0, 0, 0]}>
@@ -193,24 +236,36 @@ export function CharacterLowPoly({
           </mesh>
         </group>
 
-        {/* left arm reaching forward toward the desk */}
-        <group ref={leftArmRef} position={[-0.32, 1.42, 0]} rotation={[1.05, 0, 0.12]}>
-          <ToonPart color={shirtColor} position={[0, -0.28, 0]}>
-            <capsuleGeometry args={[0.095, 0.46, 4, 8]} />
+        {/* left arm: shoulder -> upper arm -> elbow joint -> forearm -> hand */}
+        <group ref={leftArmRef} position={[-0.32, 1.42, 0]} rotation={[0.95, 0, 0.12]}>
+          <ToonPart color={shirtColor} position={[0, -0.15, 0]}>
+            <capsuleGeometry args={[0.095, 0.2, 4, 8]} />
           </ToonPart>
-          <ToonPart color={skinColor} outlineThickness={0.03} position={[0, -0.56, 0]}>
-            <sphereGeometry args={[0.1, 10, 8]} />
-          </ToonPart>
+          <group ref={leftForearmRef} position={[0, -0.3, 0]}>
+            <ToonPart color={shirtColor} position={[0, -0.13, 0]}>
+              <capsuleGeometry args={[0.088, 0.18, 4, 8]} />
+            </ToonPart>
+            <ToonPart color={skinColor} outlineThickness={0.03} position={[0, -0.3, 0]}>
+              <sphereGeometry args={[0.1, 10, 8]} />
+            </ToonPart>
+          </group>
         </group>
 
-        {/* right arm reaching forward toward the desk */}
-        <group ref={rightArmRef} position={[0.32, 1.42, 0]} rotation={[1.05, 0, -0.12]}>
-          <ToonPart color={shirtColor} position={[0, -0.28, 0]}>
-            <capsuleGeometry args={[0.095, 0.46, 4, 8]} />
+        {/* right (throwing) arm */}
+        <group ref={rightArmRef} position={[0.32, 1.42, 0]} rotation={[0.95, 0, -0.12]}>
+          <ToonPart color={shirtColor} position={[0, -0.15, 0]}>
+            <capsuleGeometry args={[0.095, 0.2, 4, 8]} />
           </ToonPart>
-          <ToonPart color={skinColor} outlineThickness={0.03} position={[0, -0.56, 0]}>
-            <sphereGeometry args={[0.1, 10, 8]} />
-          </ToonPart>
+          <group ref={rightForearmRef} position={[0, -0.3, 0]}>
+            <ToonPart color={shirtColor} position={[0, -0.13, 0]}>
+              <capsuleGeometry args={[0.088, 0.18, 4, 8]} />
+            </ToonPart>
+            <ToonPart color={skinColor} outlineThickness={0.03} position={[0, -0.3, 0]}>
+              <sphereGeometry args={[0.1, 10, 8]} />
+            </ToonPart>
+          </group>
+        </group>
+        </group>
         </group>
 
         {showBurst && <ImpactBurst elapsed={flashElapsedRef.current} duration={FLASH_DURATION_MS} color={burstColor} />}
