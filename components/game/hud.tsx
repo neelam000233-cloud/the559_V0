@@ -1,8 +1,10 @@
 "use client"
 
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/lib/i18n"
 import { MAX_HEAT, MAX_SAN } from "@/lib/game/constants"
-import type { FighterState, GameState, PlayerId } from "@/lib/game/types"
+import type { FighterState, GameState } from "@/lib/game/types"
+import { DefenseBar } from "./defense-bar"
 
 function formatTime(ms: number) {
   const totalSeconds = Math.ceil(ms / 1000)
@@ -10,6 +12,8 @@ function formatTime(ms: number) {
   const s = totalSeconds % 60
   return `${m}:${s.toString().padStart(2, "0")}`
 }
+
+const HIGHLIGHT_RING = "rounded-lg ring-2 ring-amber-300 ring-offset-2 ring-offset-transparent animate-pulse"
 
 function StatBar({
   value,
@@ -36,21 +40,26 @@ function StatBar({
   )
 }
 
-function FighterPanel({ fighter, side }: { fighter: FighterState; side: "left" | "right" }) {
+function FighterPanel({ fighter, side, highlighted }: { fighter: FighterState; side: "left" | "right"; highlighted: boolean }) {
+  const { t } = useLanguage()
   const isPlayer = fighter.id === "player"
   const align = side === "left" ? "items-start" : "items-end"
   const textAlign = side === "left" ? "text-left" : "text-right"
   return (
-    <div className={cn("flex flex-col gap-1.5", align)}>
+    <div className={cn("flex flex-col gap-1.5 p-1", align, highlighted && HIGHLIGHT_RING)}>
       <span className={cn("text-xs font-bold uppercase tracking-wider text-amber-100/90", textAlign)}>
-        {isPlayer ? "Player" : "Opponent"}
-        {fighter.combo > 1 && <span className="ml-1.5 text-orange-300">Combo x{fighter.combo}</span>}
+        {isPlayer ? t("hud.player") : t("hud.opponent")}
+        {fighter.combo > 1 && <span className="ml-1.5 text-orange-300">{t("hud.combo", { n: fighter.combo })}</span>}
       </span>
-      <StatBar value={fighter.san} max={MAX_SAN} colorClass="bg-sky-400" align={side === "left" ? "left" : "right"} />
-      <StatBar value={fighter.heat} max={MAX_HEAT} colorClass="bg-red-500" align={side === "left" ? "left" : "right"} />
+      <StatBar value={fighter.san} max={MAX_SAN} colorClass="bg-sky-400" align={side} />
+      <StatBar value={fighter.heat} max={MAX_HEAT} colorClass="bg-red-500" align={side} />
       <div className={cn("flex gap-2 text-[10px] text-white/50", textAlign)}>
-        <span>SAN {Math.ceil(fighter.san)}</span>
-        <span>HEAT {Math.ceil(fighter.heat)}</span>
+        <span>
+          {t("hud.san")} {Math.ceil(fighter.san)}
+        </span>
+        <span>
+          {t("hud.heat")} {Math.ceil(fighter.heat)}
+        </span>
       </div>
     </div>
   )
@@ -58,57 +67,68 @@ function FighterPanel({ fighter, side }: { fighter: FighterState; side: "left" |
 
 export function GameHud({
   state,
+  tutorial = false,
+  highlight = [],
   onTogglePause,
   onOpenSettings,
 }: {
   state: GameState
+  tutorial?: boolean
+  highlight?: string[]
   onTogglePause: () => void
   onOpenSettings: () => void
 }) {
+  const { t } = useLanguage()
   const { player, opponent } = state.fighters
-  const documentLabel = state.documentOwner === "player" ? "You have the document" : "Opponent has the document"
+  const documentLabel = state.documentOwner === "player" ? t("hud.docYou") : t("hud.docOpp")
+  const lit = (name: string) => highlight.includes(name)
 
   return (
     <>
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 p-4">
-        <FighterPanel fighter={player} side="left" />
+        <FighterPanel fighter={player} side="left" highlighted={lit("player-bars")} />
 
         <div className="pointer-events-auto flex flex-col items-center gap-1">
-          <div className="rounded-md bg-black/50 px-3 py-1 font-mono text-lg font-bold text-amber-100 tabular-nums ring-1 ring-white/10">
+          <div
+            className={cn(
+              "rounded-md bg-black/50 px-3 py-1 font-mono text-lg font-bold text-amber-100 tabular-nums ring-1 ring-white/10",
+              lit("timer") && HIGHLIGHT_RING,
+            )}
+          >
             {formatTime(state.remainingMs)}
           </div>
-          <button
-            onClick={onTogglePause}
-            className="rounded-md bg-black/40 px-2 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10 hover:bg-black/60"
-          >
-            {state.isPaused ? "Resume" : "Pause"}
-          </button>
+          {!tutorial && (
+            <button
+              onClick={onTogglePause}
+              className="rounded-md bg-black/40 px-2 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10 hover:bg-black/60"
+            >
+              {state.isPaused ? t("hud.resume") : t("hud.pause")}
+            </button>
+          )}
           <button
             onClick={onOpenSettings}
             className="rounded-md bg-black/40 px-2 py-0.5 text-[11px] text-white/70 ring-1 ring-white/10 hover:bg-black/60"
           >
-              Settings
+            {t("hud.settings")}
           </button>
         </div>
 
-        <FighterPanel fighter={opponent} side="right" />
+        <FighterPanel fighter={opponent} side="right" highlighted={lit("opponent-bars")} />
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 flex flex-col items-center gap-1">
-        <div className="rounded-md bg-black/40 px-3 py-1 text-xs text-amber-200/80 ring-1 ring-white/10">
-          {documentLabel}
-        </div>
+      <div className={cn("pointer-events-none absolute inset-x-0 flex flex-col items-center gap-1", tutorial ? "bottom-56" : "bottom-4")}>
+        <DefenseBar state={state} alwaysVisible={tutorial && lit("defense-bar")} highlighted={lit("defense-bar")} />
+        <div className="rounded-md bg-black/40 px-3 py-1 text-xs text-amber-200/80 ring-1 ring-white/10">{documentLabel}</div>
         <div className="flex h-5 gap-3 text-sm font-semibold">
           {player.lastActionLabel && state.now - player.lastActionAt < 900 && (
-            <span className="text-sky-300">{player.lastActionLabel}</span>
+            <span className="text-sky-300">{t(player.lastActionLabel)}</span>
           )}
           {opponent.lastActionLabel && state.now - opponent.lastActionAt < 900 && (
-            <span className="text-red-300">{opponent.lastActionLabel}</span>
+            <span className="text-red-300">{t(opponent.lastActionLabel)}</span>
           )}
         </div>
-        <p className="text-[11px] text-white/40">
-          With document: Space = Toss · F = Feint{"  |  "}Without: Hold Space = Block (early window = Parry)
-        </p>
+        {!tutorial && <p className={cn("text-[11px] text-white/40", lit("hint") && HIGHLIGHT_RING)}>{t("hud.hint")}</p>}
+        {tutorial && lit("hint") && <p className={cn("px-2 py-0.5 text-[11px] text-white/70", HIGHLIGHT_RING)}>{t("hud.hint")}</p>}
       </div>
     </>
   )

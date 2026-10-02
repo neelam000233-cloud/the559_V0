@@ -31,6 +31,8 @@ export interface DocumentEvent {
   kind: DocumentEventKind
   from: PlayerId
   to: PlayerId
+  /** Tutorial-only: a staged hand-over that carries no damage and no sound. */
+  scripted?: boolean
 }
 
 /** What the defender was doing at the instant they were attacked. */
@@ -41,6 +43,8 @@ export interface FighterState {
   san: number
   heat: number
   abilities: Abilities
+  /** Length of the parry segment of this fighter's defense hold; the block segment is the same length. */
+  parryWindowMs: number
   isHoldingSpace: boolean
   holdStartTime: number | null
   phase: CombatPhase
@@ -80,6 +84,9 @@ export interface GameState {
   /** Real-time ms left in the impact freeze; the simulation clock is paused while > 0. */
   hitstopRemainingMs: number
   documentEvent: DocumentEvent | null
+  /** Simulation speed multiplier (1 = normal); the tutorial lowers it for parry practice. */
+  timeScale: number
+  isTutorial: boolean
 }
 
 export interface MatchConfig {
@@ -88,4 +95,6 @@ export interface MatchConfig {
   playerAbilities: Abilities
   opponentAbilities: Abilities
   effectsIntensity: EffectsIntensity
+  /** Scripted tutorial match: opponent AI is driven externally, nobody can lose, the clock is frozen. */
+  tutorial?: boolean
 }
