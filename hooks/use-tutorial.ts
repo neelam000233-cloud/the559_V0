@@ -8,6 +8,7 @@ import { TUTORIAL_STEPS } from "@/lib/game/tutorial-steps"
 export type TutorialPhase = "explain" | "practice" | "success" | "failed"
 
 const RETRY_DELAY_MS = 2600
+const RETURN_DELAY_MS = 1100
 const OPPONENT_TOSS_AT_MS: Record<string, number> = { block: 2000, parry: 1000 }
 
 export function useTutorial(
@@ -26,6 +27,8 @@ export function useTutorial(
   const lastEventId = useRef<number | null>(state.documentEvent?.id ?? null)
   const wasFeinting = useRef(false)
   const releaseTimer = useRef<number | null>(null)
+  const returnTimer = useRef<number | null>(null)
+  const lastReturnEventId = useRef<number | null>(state.documentEvent?.id ?? null)
 
   const enterPractice = useCallback(
     (retry: boolean) => {
@@ -83,9 +86,27 @@ export function useTutorial(
   useEffect(
     () => () => {
       if (releaseTimer.current !== null) window.clearTimeout(releaseTimer.current)
+      if (returnTimer.current !== null) window.clearTimeout(returnTimer.current)
     },
     [],
   )
+
+  // In the feint step the player may still press Space and toss; the opponent throws the document straight back.
+  const eventId = state.documentEvent?.id ?? null
+  useEffect(() => {
+    const event = state.documentEvent
+    if (!active || !event || event.id === lastReturnEventId.current) return
+    lastReturnEventId.current = event.id
+    if (step.id !== "feint" || event.scripted || event.from !== "player" || event.kind === "parry") return
+    if (returnTimer.current !== null) window.clearTimeout(returnTimer.current)
+    returnTimer.current = window.setTimeout(() => {
+      returnTimer.current = null
+      if (TUTORIAL_STEPS[indexRef.current].id !== "feint") return
+      engine.tutorialFreezePhase("opponent", null)
+      engine.tutorialSetDocumentOwner("player")
+    }, RETURN_DELAY_MS)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, engine, eventId, step.id])
 
   useEffect(() => {
     const event: DocumentEvent | null = state.documentEvent

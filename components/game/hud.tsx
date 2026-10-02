@@ -69,12 +69,15 @@ export function GameHud({
   state,
   tutorial = false,
   highlight = [],
+  bottomOffset = 0,
   onTogglePause,
   onOpenSettings,
 }: {
   state: GameState
   tutorial?: boolean
   highlight?: string[]
+  /** Height in px of the tutorial panel (with its hint); the bottom HUD stack sits above it. */
+  bottomOffset?: number
   onTogglePause: () => void
   onOpenSettings: () => void
 }) {
@@ -116,7 +119,10 @@ export function GameHud({
         <FighterPanel fighter={opponent} side="right" highlighted={lit("opponent-bars")} />
       </div>
 
-      <div className={cn("pointer-events-none absolute inset-x-0 flex flex-col items-center gap-1", tutorial ? "bottom-56" : "bottom-4")}>
+      <div
+        className={cn("pointer-events-none absolute inset-x-0 flex flex-col items-center gap-1", !tutorial && "bottom-4")}
+        style={tutorial ? { bottom: bottomOffset + 24 } : undefined}
+      >
         <DefenseBar state={state} alwaysVisible={tutorial && lit("defense-bar")} highlighted={lit("defense-bar")} />
         <div className="rounded-md bg-black/40 px-3 py-1 text-xs text-amber-200/80 ring-1 ring-white/10">{documentLabel}</div>
         <div className="flex h-5 gap-3 text-sm font-semibold">
@@ -128,7 +134,6 @@ export function GameHud({
           )}
         </div>
         {!tutorial && <p className={cn("text-[11px] text-white/40", lit("hint") && HIGHLIGHT_RING)}>{t("hud.hint")}</p>}
-        {tutorial && lit("hint") && <p className={cn("px-2 py-0.5 text-[11px] text-white/70", HIGHLIGHT_RING)}>{t("hud.hint")}</p>}
       </div>
     </>
   )

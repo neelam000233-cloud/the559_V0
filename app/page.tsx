@@ -45,10 +45,11 @@ export default function Page() {
     onExit: () => reset({ difficulty: 1, tutorial: false }),
     onComplete: () => {
       tutorialDoneStore.set("yes")
+      setPicked(1)
       reset({ difficulty: 1, tutorial: false })
-      start()
     },
   })
+  const [tutorialPanelHeight, setTutorialPanelHeight] = useState(0)
 
   const handleEffectsIntensityChange = (intensity: EffectsIntensity) => {
     setEffectsIntensity(intensity)
@@ -105,6 +106,7 @@ export default function Page() {
           state={state}
           tutorial={inTutorial}
           highlight={inTutorial ? tutorial.step.highlight : []}
+          bottomOffset={tutorialPanelHeight}
           onTogglePause={() => setPaused(!state.isPaused)}
           onOpenSettings={() => setShowSettings(true)}
         />
@@ -121,6 +123,7 @@ export default function Page() {
           onProceed={tutorial.proceed}
           onSkip={tutorial.skip}
           onExit={tutorial.exit}
+          onHeightChange={setTutorialPanelHeight}
         />
       )}
 

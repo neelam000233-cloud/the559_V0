@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/lib/i18n"
 import { BLOCKED_ATTACKER_PENALTY } from "@/lib/game/constants"
@@ -33,6 +34,7 @@ export function TutorialPanel({
   onProceed,
   onSkip,
   onExit,
+  onHeightChange,
 }: {
   step: TutorialStep
   index: number
@@ -43,8 +45,23 @@ export function TutorialPanel({
   onProceed: () => void
   onSkip: () => void
   onExit: () => void
+  onHeightChange: (height: number) => void
 }) {
   const { t } = useLanguage()
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const report = () => onHeightChange(el.offsetHeight)
+    report()
+    const observer = new ResizeObserver(report)
+    observer.observe(el)
+    return () => {
+      observer.disconnect()
+      onHeightChange(0)
+    }
+  }, [onHeightChange])
   const penaltyParams = {
     blockSan: BLOCKED_ATTACKER_PENALTY.block.san,
     blockHeat: BLOCKED_ATTACKER_PENALTY.block.heat,
@@ -63,7 +80,12 @@ export function TutorialPanel({
   const showPrimary = phase === "explain" || phase === "success"
 
   return (
-    <div className="absolute inset-x-0 bottom-3 flex justify-center px-3">
+    <div ref={wrapperRef} className="absolute inset-x-0 bottom-3 flex flex-col items-center gap-3 px-3">
+      {step.highlight?.includes("hint") && (
+        <p className="rounded-lg bg-black/50 px-3 py-1 text-center text-[11px] text-white/80 ring-2 ring-amber-300 animate-pulse">
+          {t("hud.hint")}
+        </p>
+      )}
       <section
         aria-live="polite"
         className="pointer-events-auto flex w-[min(96vw,38rem)] flex-col gap-2 rounded-lg bg-[#241a2e]/95 p-3.5 shadow-xl ring-1 ring-amber-300/40 backdrop-blur"
