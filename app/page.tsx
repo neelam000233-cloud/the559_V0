@@ -137,7 +137,7 @@ export default function Page() {
               </button>
             </div>
 
-            {!tutorialDone && (
+            {selection === "tutorial" && !tutorialDone && (
               <div className="rounded-md bg-amber-400/10 p-3 ring-1 ring-amber-300/30">
                 <p className="text-xs font-bold text-amber-200">{t("start.firstTitle")}</p>
                 <p className="mt-0.5 text-[11px] text-white/60">{t("start.firstBody")}</p>
