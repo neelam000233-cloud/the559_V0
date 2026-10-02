@@ -1,5 +1,6 @@
 import type {
   Abilities,
+  CombatPhase,
   DocumentEventKind,
   FeintVariant,
   FighterState,
@@ -33,12 +34,13 @@ function pickFeintVariant(previous: FeintVariant | null): FeintVariant {
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
-function createFighter(id: PlayerId, abilities: Abilities): FighterState {
+function createFighter(id: PlayerId, abilities: Abilities, parryWindowMs: number): FighterState {
   return {
     id,
     san: MAX_SAN,
     heat: 0,
     abilities,
+    parryWindowMs,
     isHoldingSpace: false,
     holdStartTime: null,
     phase: "idle",
@@ -65,6 +67,8 @@ export class GameEngine {
   private config: MatchConfig
   private subscribers = new Set<() => void>()
   private aiNextDecisionAt = 0
+  /** Tutorial-only: pins a fighter's defense phase so scripted counters are deterministic. */
+  private scriptedPhase: Partial<Record<PlayerId, CombatPhase>> = {}
 
   constructor(config: MatchConfig) {
     this.config = config
@@ -79,13 +83,15 @@ export class GameEngine {
       isRunning: false,
       documentOwner: "player",
       fighters: {
-        player: createFighter("player", this.config.playerAbilities),
-        opponent: createFighter("opponent", this.config.opponentAbilities),
+        player: createFighter("player", this.config.playerAbilities, this.parryWindowOf(this.config.playerAbilities)),
+        opponent: createFighter("opponent", this.config.opponentAbilities, this.parryWindowOf(this.config.opponentAbilities)),
       },
       outcome: null,
       log: [],
       hitstopRemainingMs: 0,
       documentEvent: null,
+      timeScale: 1,
+      isTutorial: !!this.config.tutorial,
     }
   }
 
@@ -103,9 +109,54 @@ export class GameEngine {
     for (const cb of this.subscribers) cb()
   }
 
+  private parryWindowOf(abilities: Abilities): number {
+    return BASE_PARRY_WINDOW_MS[this.config.difficulty] * abilities.parryMultiplier
+  }
+
   private parryWindowFor(id: PlayerId): number {
-    const base = BASE_PARRY_WINDOW_MS[this.config.difficulty]
-    return base * this.state.fighters[id].abilities.parryMultiplier
+    return this.state.fighters[id].parryWindowMs
+  }
+
+  // ---- Tutorial controls (driven by TutorialRunner) ----
+
+  setTimeScale(scale: number) {
+    this.state.timeScale = scale
+  }
+
+  /** Hand the document over with a visible flight but no damage or sound. */
+  tutorialSetDocumentOwner(owner: PlayerId) {
+    if (this.state.documentOwner === owner) return
+    this.state.documentEvent = { id: ++documentEventId, kind: "toss", from: OPPONENT_OF[owner], to: owner, scripted: true }
+    this.state.documentOwner = owner
+    this.emit()
+  }
+
+  /** Pin (or release with null) a fighter's defense phase. */
+  tutorialFreezePhase(id: PlayerId, phase: CombatPhase | null) {
+    if (phase) this.scriptedPhase[id] = phase
+    else delete this.scriptedPhase[id]
+    this.emit()
+  }
+
+  /** Restore full vitals and idle stances; optionally move the document to a given fighter. */
+  tutorialResetRound(owner?: PlayerId) {
+    this.scriptedPhase = {}
+    for (const f of Object.values(this.state.fighters)) {
+      f.san = MAX_SAN
+      f.heat = 0
+      f.phase = "idle"
+      f.isHoldingSpace = false
+      f.holdStartTime = null
+      f.cooldownUntil = null
+      f.combo = 0
+      f.isFeinting = false
+      f.feintCooldownUntil = null
+      f.hasAttackedThisPress = false
+      f.lastActionLabel = null
+    }
+    this.state.hitstopRemainingMs = 0
+    if (owner) this.tutorialSetDocumentOwner(owner)
+    this.emit()
   }
 
   start() {
@@ -123,6 +174,7 @@ export class GameEngine {
   reset(config?: Partial<MatchConfig>) {
     this.config = { ...this.config, ...config }
     this.aiNextDecisionAt = 0
+    this.scriptedPhase = {}
     this.state = this.buildInitialState()
     this.emit()
   }
@@ -142,8 +194,9 @@ export class GameEngine {
       return
     }
 
-    this.state.now += dtMs
-    this.state.remainingMs = Math.max(0, this.state.remainingMs - dtMs)
+    const scaledDt = dtMs * this.state.timeScale
+    this.state.now += scaledDt
+    if (!this.state.isTutorial) this.state.remainingMs = Math.max(0, this.state.remainingMs - scaledDt)
 
     for (const id of ["player", "opponent"] as PlayerId[]) {
       this.updateDefensePhase(id)
@@ -151,7 +204,7 @@ export class GameEngine {
       if (f.isFeinting && this.state.now >= f.feintUntil) f.isFeinting = false
     }
 
-    this.updateAI()
+    if (!this.state.isTutorial) this.updateAI()
     this.checkOutcomes()
 
     if (this.state.remainingMs <= 0 && !this.state.outcome) {
@@ -163,6 +216,11 @@ export class GameEngine {
 
   private updateDefensePhase(id: PlayerId) {
     const f = this.state.fighters[id]
+    const pinned = this.scriptedPhase[id]
+    if (pinned) {
+      f.phase = pinned
+      return
+    }
     if (f.phase === "cooldown") {
       if (f.cooldownUntil !== null && this.state.now >= f.cooldownUntil) {
         f.phase = "idle"
@@ -330,7 +388,7 @@ export class GameEngine {
   }
 
   private checkOutcomes() {
-    if (this.state.outcome) return
+    if (this.state.outcome || this.state.isTutorial) return
     const p = this.state.fighters.player
     const o = this.state.fighters.opponent
     const pDoubleLoss = p.san < DOUBLE_LOSS_SAN_THRESHOLD && p.heat > DOUBLE_LOSS_HEAT_THRESHOLD

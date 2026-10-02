@@ -28,6 +28,7 @@ export function useGameEngine(config?: Partial<MatchConfig>) {
     const event = state.documentEvent
     if (!event || event.id === lastSfxEventId.current) return
     lastSfxEventId.current = event.id
+    if (event.scripted) return
     const playerAttacked = event.from === "player"
     if (event.kind === "toss") playSfx(playerAttacked ? "toss" : "gotHit")
     else if (playerAttacked) playSfx("countered")
@@ -71,6 +72,7 @@ export function useGameEngine(config?: Partial<MatchConfig>) {
   }, [engine])
 
   return {
+    engine,
     state,
     start: () => engine.start(),
     setPaused: (paused: boolean) => engine.setPaused(paused),
