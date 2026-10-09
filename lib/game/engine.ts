@@ -19,6 +19,7 @@ import {
   COOLDOWN_HEAT_PENALTY,
   COOLDOWN_SAN_MULTIPLIER,
   DEFENSE_COOLDOWN_RATIO,
+  PARRY_RECOVERY_MS,
   DOUBLE_LOSS_HEAT_THRESHOLD,
   DOUBLE_LOSS_SAN_THRESHOLD,
   HITSTOP_MS,
@@ -49,6 +50,7 @@ function createFighter(id: PlayerId, abilities: Abilities, parryWindowMs: number
     holdStartTime: null,
     phase: "idle",
     cooldownUntil: null,
+    recoveryUntil: null,
     combo: 0,
     isFeinting: false,
     feintCooldownUntil: null,
@@ -152,6 +154,7 @@ export class GameEngine {
       f.isHoldingSpace = false
       f.holdStartTime = null
       f.cooldownUntil = null
+      f.recoveryUntil = null
       f.combo = 0
       f.isFeinting = false
       f.feintCooldownUntil = null
@@ -225,6 +228,14 @@ export class GameEngine {
       f.phase = pinned
       return
     }
+    if (f.phase === "recovery") {
+      if (f.recoveryUntil !== null && this.state.now >= f.recoveryUntil) {
+        f.phase = "idle"
+        f.recoveryUntil = null
+        f.defenseResolution = null
+      }
+      return
+    }
     if (f.phase === "cooldown") {
       if (f.cooldownUntil !== null && this.state.now >= f.cooldownUntil) {
         f.phase = "idle"
@@ -264,7 +275,7 @@ export class GameEngine {
     }
 
     // Defender role: begin a Parry hold. Cooldown cannot be interrupted or restarted.
-    if (f.phase === "cooldown") return
+    if (f.phase === "cooldown" || f.phase === "recovery") return
     f.defenseResolution = null
     f.isHoldingSpace = true
     f.holdStartTime = this.state.now
@@ -343,10 +354,13 @@ export class GameEngine {
       defender.lastActionAt = this.state.now
       attacker.lastActionLabel = null
       this.penalizeBlockedAttacker(attacker, "parry")
-      defender.phase = "idle"
+      defender.phase = PARRY_RECOVERY_MS[this.config.difficulty] > 0 ? "recovery" : "idle"
       defender.isHoldingSpace = false
-      defender.holdStartTime = null
+      defender.holdStartTime = PARRY_RECOVERY_MS[this.config.difficulty] > 0 ? this.state.now : null
       defender.cooldownUntil = null
+      defender.recoveryUntil = PARRY_RECOVERY_MS[this.config.difficulty] > 0
+        ? this.state.now + PARRY_RECOVERY_MS[this.config.difficulty]
+        : null
       defender.defenseResolution = "parry"
       this.pushLog("Parry! Document bounced back", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260

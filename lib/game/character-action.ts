@@ -32,7 +32,7 @@ export function deriveCharacterVisual(fighter: FighterState, isDocumentOwner: bo
     pose = "feint"
   } else if (fighter.phase === "parryWindow") {
     pose = "guard-parry"
-  } else if (fighter.phase === "cooldown") {
+  } else if (fighter.phase === "recovery" || fighter.phase === "cooldown") {
     pose = "guard-block"
   } else if (isDocumentOwner) {
     pose = "idle-hold"

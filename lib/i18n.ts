@@ -36,6 +36,7 @@ const EN = {
   "bar.parry": "PARRY",
   "bar.block": "BLOCK",
   "bar.cooldown": "COOLDOWN",
+  "bar.recovery": "RECOVERY",
 
   // Action labels coming from the engine
   "PARRY!": "PARRY!",
@@ -139,7 +140,7 @@ const ZH: Record<MessageKey, string> = {
   "start.desc.tutorial": "引导练习：学习投掷、防守、Parry 和假动作。教学中不会输。",
   "start.startMatch": "开始对战",
   "start.startTutorial": "开始教学",
-  "start.controls": "持有文件时：空格 = 投掷，F = 假动作。没有文件时：按住空格 = 防守，按住的前半段是 Parry 窗口。",
+  "start.controls": "持有文件时：空格 = 投掷，F = 假动作。没有文件时：按住空格 = 防守，按住���前半段是 Parry 窗口。",
   "start.recommended": "新手",
   "start.completed": "已完成",
   "start.firstTitle": "第一次来？",
@@ -160,6 +161,7 @@ const ZH: Record<MessageKey, string> = {
   "bar.parry": "PARRY",
   "bar.block": "防守",
   "bar.cooldown": "冷静期",
+  "bar.recovery": "恢复期",
 
   "PARRY!": "弹反！",
   "Blocked (reduced)": "已防守（减伤）",

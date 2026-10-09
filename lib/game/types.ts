@@ -36,7 +36,7 @@ export interface DocumentEvent {
 }
 
 /** What the defender was doing at the instant they were attacked. */
-export type CombatPhase = "idle" | "parryWindow" | "cooldown"
+export type CombatPhase = "idle" | "parryWindow" | "recovery" | "cooldown"
 
 export type DefenseResolution = "parry" | "cooldown" | null
 
@@ -52,6 +52,7 @@ export interface FighterState {
   holdStartTime: number | null
   phase: CombatPhase
   cooldownUntil: number | null
+  recoveryUntil: number | null
   combo: number
   isFeinting: boolean
   feintCooldownUntil: number | null
