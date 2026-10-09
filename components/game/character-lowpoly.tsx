@@ -5,7 +5,7 @@ import { useFrame } from "@react-three/fiber"
 import * as THREE from "three"
 import { Outlines } from "@react-three/drei"
 import { getToonGradientMap, OUTLINE_COLOR } from "@/lib/three-toon"
-import type { CharacterFlash, CharacterPose } from "@/lib/game/character-action"
+import type { CharacterFlash, CharacterPose, FaceExpression } from "@/lib/game/character-action"
 import { feintMotion, ZERO_FEINT_MOTION, type FeintMotion } from "@/lib/game/feint-motion"
 import type { FeintVariant } from "@/lib/game/types"
 
@@ -23,7 +23,7 @@ function ToonPart({
   outlineThickness?: number
   outlineColor?: string
   children: React.ReactNode
-} & JSX.IntrinsicElements["mesh"]) {
+} & React.JSX.IntrinsicElements["mesh"]) {
   return (
     <mesh castShadow receiveShadow {...meshProps}>
       {children}
@@ -80,6 +80,51 @@ const POSE_TARGETS: Record<CharacterPose, PoseTarget> = {
 
 const POSE_KEYS = Object.keys(POSE_TARGETS["idle-hold"]) as (keyof PoseTarget)[]
 
+/**
+ * Face rig parameters, all eased toward every frame.
+ * Brow angle: positive = angry (inner ends down), negative = worried (inner ends up).
+ * Mouth curve: positive = smile, negative = frown.
+ */
+interface FaceTarget {
+  eyeOpen: number
+  eyeWide: number
+  browYL: number
+  browYR: number
+  browAL: number
+  browAR: number
+  mouthCurve: number
+  mouthWidth: number
+  mouthOpen: number
+  mouthTilt: number
+  /** How strongly the open mouth chatters (shouting / yelping). */
+  jitter: number
+  sweat: number
+}
+
+const FACE_TARGETS: Record<FaceExpression, FaceTarget> = {
+  neutral: { eyeOpen: 1, eyeWide: 1, browYL: 0, browYR: 0, browAL: 0, browAR: 0, mouthCurve: 0.1, mouthWidth: 0.8, mouthOpen: 0, mouthTilt: 0, jitter: 0, sweat: 0 },
+  smug: { eyeOpen: 0.6, eyeWide: 1, browYL: 0, browYR: 0.008, browAL: 0.12, browAR: -0.1, mouthCurve: 0.7, mouthWidth: 0.9, mouthOpen: 0, mouthTilt: 0.22, jitter: 0, sweat: 0 },
+  focused: { eyeOpen: 0.55, eyeWide: 1, browYL: -0.006, browYR: -0.006, browAL: 0.5, browAR: 0.5, mouthCurve: -0.05, mouthWidth: 0.7, mouthOpen: 0, mouthTilt: 0, jitter: 0, sweat: 0 },
+  bracing: { eyeOpen: 0.18, eyeWide: 1, browYL: 0.006, browYR: 0.006, browAL: -0.4, browAR: -0.4, mouthCurve: -0.5, mouthWidth: 1, mouthOpen: 0.25, mouthTilt: 0, jitter: 0, sweat: 1 },
+  sly: { eyeOpen: 0.7, eyeWide: 1, browYL: 0, browYR: 0.01, browAL: 0.3, browAR: -0.15, mouthCurve: 0.9, mouthWidth: 1, mouthOpen: 0, mouthTilt: -0.25, jitter: 0, sweat: 0 },
+  grin: { eyeOpen: 0.85, eyeWide: 1, browYL: 0, browYR: 0, browAL: 0.25, browAR: 0.25, mouthCurve: 1, mouthWidth: 1.15, mouthOpen: 0.4, mouthTilt: 0, jitter: 0, sweat: 0 },
+  wide: { eyeOpen: 1.35, eyeWide: 1.15, browYL: 0.012, browYR: 0.012, browAL: -0.1, browAR: -0.1, mouthCurve: 0, mouthWidth: 0.5, mouthOpen: 0.7, mouthTilt: 0, jitter: 0, sweat: 0 },
+  shocked: { eyeOpen: 1.4, eyeWide: 1.2, browYL: 0.012, browYR: 0.012, browAL: -0.25, browAR: -0.25, mouthCurve: -0.1, mouthWidth: 0.55, mouthOpen: 0.8, mouthTilt: 0, jitter: 0, sweat: 0.6 },
+  shout: { eyeOpen: 0.75, eyeWide: 1, browYL: -0.005, browYR: -0.005, browAL: 0.6, browAR: 0.6, mouthCurve: -0.25, mouthWidth: 1.1, mouthOpen: 0.9, mouthTilt: 0, jitter: 1, sweat: 0 },
+  triumph: { eyeOpen: 0.22, eyeWide: 1, browYL: 0.01, browYR: 0.01, browAL: 0.1, browAR: 0.1, mouthCurve: 1, mouthWidth: 1.25, mouthOpen: 0.55, mouthTilt: 0, jitter: 0, sweat: 0 },
+  relieved: { eyeOpen: 0.9, eyeWide: 1, browYL: 0.004, browYR: 0.004, browAL: -0.2, browAR: -0.2, mouthCurve: 0.5, mouthWidth: 0.9, mouthOpen: 0, mouthTilt: 0.1, jitter: 0, sweat: 0.5 },
+  pain: { eyeOpen: 0.1, eyeWide: 1, browYL: 0.008, browYR: 0.008, browAL: -0.65, browAR: -0.65, mouthCurve: -0.9, mouthWidth: 1, mouthOpen: 0.65, mouthTilt: 0, jitter: 0.6, sweat: 1 },
+  frustrated: { eyeOpen: 0.6, eyeWide: 1, browYL: -0.008, browYR: -0.008, browAL: 0.7, browAR: 0.7, mouthCurve: -0.7, mouthWidth: 0.95, mouthOpen: 0.15, mouthTilt: -0.1, jitter: 0, sweat: 0 },
+  nervous: { eyeOpen: 1.1, eyeWide: 1, browYL: 0.004, browYR: 0.004, browAL: -0.35, browAR: -0.35, mouthCurve: -0.3, mouthWidth: 0.7, mouthOpen: 0.1, mouthTilt: 0, jitter: 0, sweat: 0.8 },
+}
+
+const FACE_KEYS = Object.keys(FACE_TARGETS.neutral) as (keyof FaceTarget)[]
+
+const BROW_BASE_Y = 0.035
+const MOUTH_Y = -0.095
+const EYE_X = 0.08
+const EYE_Y = -0.015
+
 interface CharacterProps {
   position: [number, number, number]
   /** 1 = model faces -Z (forward into the room), -1 = faces +Z */
@@ -89,6 +134,9 @@ interface CharacterProps {
   hairColor?: string
   pantsColor?: string
   pose?: CharacterPose
+  expression?: FaceExpression
+  /** -1..1 horizontal eye direction. */
+  lookX?: number
   flash?: CharacterFlash
   /** Changes whenever a new flash should retrigger (engine timestamp of the event). */
   flashKey?: number
@@ -104,12 +152,25 @@ export function CharacterLowPoly({
   hairColor = "#241a16",
   pantsColor = "#231e2b",
   pose = "idle-hold",
+  expression = "neutral",
+  lookX = 0,
   flash = null,
   flashKey = 0,
   feintVariant = null,
   feintProgress = null,
 }: CharacterProps) {
   const rotY = facing === 1 ? 0 : Math.PI
+
+  const eyeLRef = useRef<THREE.Mesh>(null)
+  const eyeRRef = useRef<THREE.Mesh>(null)
+  const browLRef = useRef<THREE.Mesh>(null)
+  const browRRef = useRef<THREE.Mesh>(null)
+  const mouthGroupRef = useRef<THREE.Group>(null)
+  const mouthArcRef = useRef<THREE.Mesh>(null)
+  const mouthOpenRef = useRef<THREE.Mesh>(null)
+  const sweatRef = useRef<THREE.Mesh>(null)
+  const faceRef = useRef<FaceTarget>({ ...FACE_TARGETS.neutral })
+  const lookRef = useRef(0)
 
   const torsoRef = useRef<THREE.Group>(null)
   const headRef = useRef<THREE.Group>(null)
@@ -134,7 +195,51 @@ export function CharacterLowPoly({
 
   const outlineColorRef = useRef(OUTLINE_COLOR)
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
+    const faceTarget = FACE_TARGETS[expression]
+    const face = faceRef.current
+    const faceK = 1 - Math.exp(-delta * 18)
+    for (const key of FACE_KEYS) face[key] += (faceTarget[key] - face[key]) * faceK
+    lookRef.current += (lookX - lookRef.current) * faceK
+
+    const t = state.clock.elapsedTime
+    const eyeScaleY = Math.max(0.12, face.eyeOpen) * 1.2
+    const eyeScaleX = face.eyeWide * 1.2
+    if (eyeLRef.current) {
+      eyeLRef.current.position.x = -EYE_X + lookRef.current * 0.022
+      eyeLRef.current.scale.set(eyeScaleX, eyeScaleY, 1)
+    }
+    if (eyeRRef.current) {
+      eyeRRef.current.position.x = EYE_X + lookRef.current * 0.022
+      eyeRRef.current.scale.set(eyeScaleX, eyeScaleY, 1)
+    }
+    // Inner ends sit toward the nose: the left brow's inner end is +x, the right brow's is -x.
+    if (browLRef.current) {
+      browLRef.current.position.y = BROW_BASE_Y + face.browYL
+      browLRef.current.rotation.z = -face.browAL
+    }
+    if (browRRef.current) {
+      browRRef.current.position.y = BROW_BASE_Y + face.browYR
+      browRRef.current.rotation.z = face.browAR
+    }
+    if (mouthGroupRef.current) mouthGroupRef.current.rotation.z = face.mouthTilt
+    if (mouthArcRef.current) {
+      // Negative scale flips the arc into a frown while its endpoints stay pinned to the mouth line.
+      const curve = Math.sign(face.mouthCurve || 1) * Math.max(0.06, Math.abs(face.mouthCurve))
+      mouthArcRef.current.scale.set(face.mouthWidth, curve, 1)
+    }
+    if (mouthOpenRef.current) {
+      const open = Math.max(0, face.mouthOpen + Math.sin(t * 26) * 0.12 * face.jitter * face.mouthOpen)
+      mouthOpenRef.current.visible = open > 0.04
+      mouthOpenRef.current.scale.set(face.mouthWidth * 0.85, Math.max(0.01, open), 1)
+      mouthOpenRef.current.position.y = -0.02 * open
+    }
+    if (sweatRef.current) {
+      sweatRef.current.visible = face.sweat > 0.08
+      sweatRef.current.scale.setScalar(face.sweat)
+      sweatRef.current.position.y = -0.01 - ((t * 0.7) % 1) * 0.09
+    }
+
     const target = POSE_TARGETS[pose]
     const lerpSpeed = pose === "feint" || pose === "guard-parry" ? 14 : 8
     const k = Math.min(1, delta * lerpSpeed)
@@ -225,14 +330,39 @@ export function CharacterLowPoly({
             <sphereGeometry args={[0.225, 14, 12, 0, Math.PI * 2, 0, Math.PI * 0.55]} />
           </ToonPart>
 
-          {/* face marks: simple bold comic eyes */}
-          <mesh position={[-0.08, 0.01, -0.2]}>
-            <sphereGeometry args={[0.025, 8, 8]} />
+          {/* animated face: comic eyes, brows, mouth and a sweat drop driven by the expression rig */}
+          <mesh ref={eyeLRef} position={[-EYE_X, EYE_Y, -0.2]}>
+            <sphereGeometry args={[0.025, 10, 8]} />
             <meshBasicMaterial color="#160b14" />
           </mesh>
-          <mesh position={[0.08, 0.01, -0.2]}>
-            <sphereGeometry args={[0.025, 8, 8]} />
+          <mesh ref={eyeRRef} position={[EYE_X, EYE_Y, -0.2]}>
+            <sphereGeometry args={[0.025, 10, 8]} />
             <meshBasicMaterial color="#160b14" />
+          </mesh>
+
+          <mesh ref={browLRef} position={[-EYE_X, BROW_BASE_Y, -0.205]}>
+            <boxGeometry args={[0.075, 0.016, 0.02]} />
+            <meshBasicMaterial color={hairColor} />
+          </mesh>
+          <mesh ref={browRRef} position={[EYE_X, BROW_BASE_Y, -0.205]}>
+            <boxGeometry args={[0.075, 0.016, 0.02]} />
+            <meshBasicMaterial color={hairColor} />
+          </mesh>
+
+          <group ref={mouthGroupRef} position={[0, MOUTH_Y, -0.2]}>
+            <mesh ref={mouthOpenRef} position={[0, 0, 0]} visible={false}>
+              <circleGeometry args={[0.05, 14]} />
+              <meshBasicMaterial color="#3a0f1a" side={THREE.DoubleSide} />
+            </mesh>
+            <mesh ref={mouthArcRef} position={[0, 0, -0.004]} rotation={[0, 0, Math.PI]}>
+              <torusGeometry args={[0.06, 0.011, 6, 16, Math.PI]} />
+              <meshBasicMaterial color="#160b14" side={THREE.DoubleSide} />
+            </mesh>
+          </group>
+
+          <mesh ref={sweatRef} position={[0.19, -0.01, -0.12]} visible={false}>
+            <sphereGeometry args={[0.028, 8, 8]} />
+            <meshBasicMaterial color="#8fd8ff" />
           </mesh>
         </group>
 

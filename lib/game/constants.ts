@@ -18,6 +18,18 @@ export const BASE_PARRY_WINDOW_MS: Record<AIDifficulty, number> = {
 /** A quick tap of Space (press+release faster than this) never counts as a defense hold. */
 export const TAP_GUARD_MS = 60
 
+/** After Parry expires, the defender is committed for this fraction of the Parry window. */
+export const DEFENSE_COOLDOWN_RATIO: Record<AIDifficulty, number> = {
+  1: 0.5,
+  2: 0.5,
+  3: 1,
+}
+
+/** An attack caught during cooldown is punished at 1.5x its undefended SAN damage. */
+export const COOLDOWN_SAN_MULTIPLIER = 1.5
+
+export const COOLDOWN_HEAT_PENALTY = 3
+
 export const BASE_ATTACK_DAMAGE = 12
 export const BASE_HEAT_GAIN_RATIO = 0.65
 

@@ -36,10 +36,13 @@ export interface DocumentEvent {
 }
 
 /** What the defender was doing at the instant they were attacked. */
-export type CombatPhase = "idle" | "parryWindow" | "defending" | "cooldown"
+export type CombatPhase = "idle" | "parryWindow" | "cooldown"
+
+export type DefenseResolution = "parry" | "cooldown" | null
 
 export interface FighterState {
   id: PlayerId
+  defenseResolution: DefenseResolution
   san: number
   heat: number
   abilities: Abilities

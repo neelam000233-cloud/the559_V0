@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="veil" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06111f" stop-opacity=".78"/><stop offset=".55" stop-color="#071827" stop-opacity=".42"/><stop offset="1" stop-color="#02070d" stop-opacity=".76"/></linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity=".55"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#67e8f9"/></marker>
+    <style>
+      .title{font:700 34px Inter,Arial,sans-serif;fill:#f8fafc;letter-spacing:1px}.sub{font:500 16px Inter,Arial,sans-serif;fill:#cbd5e1}.label{font:700 17px Inter,Arial,sans-serif;fill:#f8fafc}.small{font:500 13px Inter,Arial,sans-serif;fill:#dbeafe}.tiny{font:600 11px Inter,Arial,sans-serif;fill:#bae6fd;letter-spacing:.5px}.box{stroke:#67e8f9;stroke-width:2;filter:url(#shadow)}.arrow{fill:none;stroke:#67e8f9;stroke-width:3;marker-end:url(#arrow)}.thin{fill:none;stroke:#a5f3fc;stroke-width:2;stroke-dasharray:7 7;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <image x="0" y="0" width="1600" height="900" preserveAspectRatio="xMidYMid slice" opacity=".7" xlink:href="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-ZP8CpKDvAVuQDHUBmp0JoA6p3GN0Fk.png"/>
+  <rect width="1600" height="900" fill="url(#veil)"/>
+  <rect x="24" y="22" width="1552" height="856" rx="22" fill="none" stroke="#67e8f9" stroke-opacity=".45" stroke-width="2"/>
+
+  <text x="70" y="72" class="title">DOCUMENT DUEL — GAME FLOW</text>
+  <text x="70" y="101" class="sub">A timing-driven bluffing game about control, commitment, and psychological pressure</text>
+  <text x="1530" y="72" text-anchor="end" class="tiny">MECHANICS &amp; PLAYER PSYCHOLOGY · v1.0</text>
+
+  <g transform="translate(70 145)">
+    <rect width="275" height="96" rx="14" fill="#0f766e" fill-opacity=".9" class="box" stroke="#5eead4"/>
+    <text x="22" y="34" class="tiny">START / MENU</text><text x="22" y="62" class="label">Choose Difficulty</text><text x="22" y="83" class="small">Lv1 · Lv2 · Lv3 · Tutorial</text>
+  </g>
+  <path d="M345 193H430" class="arrow"/>
+  <g transform="translate(430 145)">
+    <rect width="275" height="96" rx="14" fill="#1d4ed8" fill-opacity=".9" class="box" stroke="#93c5fd"/>
+    <text x="22" y="34" class="tiny">ROUND START</text><text x="22" y="62" class="label">Document Ownership</text><text x="22" y="83" class="small">Who holds the initiative?</text>
+  </g>
+  <path d="M705 193H790" class="arrow"/>
+  <g transform="translate(790 145)">
+    <rect width="275" height="96" rx="14" fill="#7c2d12" fill-opacity=".92" class="box" stroke="#fdba74"/>
+    <text x="22" y="34" class="tiny">PLAYER DECISION</text><text x="22" y="62" class="label">Throw or Feint?</text><text x="22" y="83" class="small">Space = toss · F = feint</text>
+  </g>
+  <path d="M1065 193H1150" class="arrow"/>
+  <g transform="translate(1150 145)">
+    <rect width="330" height="96" rx="14" fill="#4c1d95" fill-opacity=".92" class="box" stroke="#d8b4fe"/>
+    <text x="22" y="34" class="tiny">OPPONENT RESPONSE</text><text x="22" y="62" class="label">Read the commitment</text><text x="22" y="83" class="small">Wait · defend · get baited</text>
+  </g>
+
+  <path d="M927 241V292" class="arrow"/>
+  <g transform="translate(765 292)">
+    <rect width="325" height="118" rx="14" fill="#92400e" fill-opacity=".94" class="box" stroke="#fbbf24"/>
+    <text x="22" y="31" class="tiny">ATTACK LOOP</text><text x="22" y="60" class="label">Throw lands</text><text x="22" y="84" class="small">Target SAN ↓ · HEAT ↑</text><text x="22" y="104" class="small">Document changes hands</text>
+  </g>
+  <path d="M1090 351H1150" class="arrow"/>
+  <g transform="translate(1150 292)">
+    <rect width="330" height="118" rx="14" fill="#172554" fill-opacity=".94" class="box" stroke="#93c5fd"/>
+    <text x="22" y="31" class="tiny">DEFENSE STATE MACHINE</text><text x="22" y="60" class="label">Parry Window</text><text x="22" y="84" class="small">Hit now → instant Parry</text><text x="22" y="104" class="small">Miss → unavoidable cooldown</text>
+  </g>
+
+  <path d="M1315 410V464" class="arrow"/>
+  <g transform="translate(1150 464)">
+    <rect width="330" height="118" rx="14" fill="#334155" fill-opacity=".96" class="box" stroke="#cbd5e1"/>
+    <text x="22" y="31" class="tiny">COOLDOWN</text><text x="22" y="60" class="label">Cannot cancel defense</text><text x="22" y="84" class="small">Hit → attacker SAN × 1.5</text><text x="22" y="104" class="small">No hit → return to idle</text>
+  </g>
+
+  <path d="M1150 523H1090" class="thin"/><path d="M1150 523H1090" class="arrow"/>
+  <g transform="translate(765 464)">
+    <rect width="325" height="118" rx="14" fill="#166534" fill-opacity=".94" class="box" stroke="#86efac"/>
+    <text x="22" y="31" class="tiny">PARRY SUCCESS</text><text x="22" y="60" class="label">Control reverses</text><text x="22" y="84" class="small">Document bounces back</text><text x="22" y="104" class="small">Attacker SAN ↓ · HEAT ↑</text>
+  </g>
+  <path d="M927 464V410" class="thin"/>
+
+  <g transform="translate(70 292)">
+    <rect width="590" height="290" rx="16" fill="#020617" fill-opacity=".78" stroke="#f472b6" stroke-width="2"/>
+    <text x="24" y="34" class="tiny" fill="#f9a8d4">PLAYER PSYCHOLOGY</text>
+    <text x="24" y="72" class="label">1. Initiative</text><text x="180" y="72" class="small">“Do I throw now or bait first?”</text>
+    <text x="24" y="116" class="label">2. Uncertainty</text><text x="180" y="116" class="small">Feint tests the opponent’s rhythm</text>
+    <text x="24" y="160" class="label">3. Precision</text><text x="180" y="160" class="small">Parry rewards exact timing</text>
+    <text x="24" y="204" class="label">4. Commitment</text><text x="180" y="204" class="small">Cooldown turns a miss into a promise</text>
+    <text x="24" y="248" class="label">5. Pressure</text><text x="180" y="248" class="small">Low SAN adds shake, vignette, urgency</text>
+  </g>
+
+  <g transform="translate(70 650)">
+    <rect width="590" height="150" rx="16" fill="#020617" fill-opacity=".78" stroke="#22d3ee" stroke-width="2"/>
+    <text x="24" y="34" class="tiny">RESOURCE FEEDBACK LOOP</text>
+    <text x="24" y="70" class="small">SAN = psychological stability · HEAT = accumulated pressure</text>
+    <text x="24" y="101" class="small">SAN &lt; 40 → camera shake · SAN &lt; 30 → dissolving black vignette</text>
+    <text x="24" y="132" class="small">Audio, hitstop, camera movement and UI bars turn numbers into felt tension.</text>
+  </g>
+
+  <path d="M1480 582V650H660" class="arrow"/>
+  <path d="M660 725H720V193H705" class="thin"/>
+  <g transform="translate(720 650)">
+    <rect width="760" height="150" rx="16" fill="#0c4a6e" fill-opacity=".9" class="box" stroke="#67e8f9"/>
+    <text x="26" y="34" class="tiny">TECHNICAL CORE</text>
+    <text x="26" y="66" class="small">Finite-state defense: idle → parryWindow → cooldown → idle</text>
+    <text x="26" y="94" class="small">Event-driven document motion: each toss / parry animates once from its current position</text>
+    <text x="26" y="122" class="small">Difficulty changes Parry timing and cooldown ratio; effects are time-limited to 1 second</text>
+  </g>
+</svg>

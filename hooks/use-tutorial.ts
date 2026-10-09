@@ -44,7 +44,7 @@ export function useTutorial(
         engine.tutorialFreezePhase("opponent", null)
         engine.tutorialSetDocumentOwner(owner)
       }
-      if (current.id === "penalty") engine.tutorialFreezePhase("opponent", "defending")
+      if (current.id === "penalty") engine.tutorialFreezePhase("opponent", "cooldown")
       script.current = { start: engine.getState().now, feinted: false, tossed: false }
       wasFeinting.current = false
       engine.setTimeScale(current.timeScale ?? 1)
@@ -152,7 +152,7 @@ export function useTutorial(
     if (step.id === "feint") {
       const feinting = state.fighters.player.isFeinting
       if (feinting && !wasFeinting.current) {
-        engine.tutorialFreezePhase("opponent", "defending")
+        engine.tutorialFreezePhase("opponent", "cooldown")
         releaseTimer.current = window.setTimeout(() => engine.tutorialFreezePhase("opponent", null), 1400)
         succeed()
       }

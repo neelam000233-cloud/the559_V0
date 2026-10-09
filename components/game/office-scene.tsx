@@ -229,10 +229,20 @@ export function OfficeSceneContents({
   effectsIntensity?: EffectsIntensity
 }) {
   const playerVisual = gameState
-    ? deriveCharacterVisual(gameState.fighters.player, gameState.documentOwner === "player", gameState.now)
+    ? deriveCharacterVisual(
+        gameState.fighters.player,
+        gameState.documentOwner === "player",
+        gameState.now,
+        gameState.fighters.opponent,
+      )
     : { ...IDLE_VISUAL, pose: "idle-hold" as const }
   const opponentVisual = gameState
-    ? deriveCharacterVisual(gameState.fighters.opponent, gameState.documentOwner === "opponent", gameState.now)
+    ? deriveCharacterVisual(
+        gameState.fighters.opponent,
+        gameState.documentOwner === "opponent",
+        gameState.now,
+        gameState.fighters.player,
+      )
     : { ...IDLE_VISUAL, pose: "idle-wait" as const }
 
   return (
@@ -280,6 +290,8 @@ export function OfficeSceneContents({
         shirtColor="#7a3ad1"
         pantsColor="#201a2b"
         pose={opponentVisual.pose}
+        expression={opponentVisual.expression}
+        lookX={opponentVisual.lookX}
         flash={opponentVisual.flash}
         flashKey={opponentVisual.flashAt}
         feintVariant={opponentVisual.feintVariant}

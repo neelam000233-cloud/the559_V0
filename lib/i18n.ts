@@ -35,6 +35,7 @@ const EN = {
   "hud.heat": "HEAT",
   "bar.parry": "PARRY",
   "bar.block": "BLOCK",
+  "bar.cooldown": "COOLDOWN",
 
   // Action labels coming from the engine
   "PARRY!": "PARRY!",
@@ -96,14 +97,14 @@ const EN = {
   "toss.success": "Landed! Watch the opponent's bars: SAN down, HEAT up. The document is theirs now.",
   "block.title": "Block",
   "block.explain":
-    "When the opponent holds the document, they will toss it at you. Hold Space to guard. The bar shows your guard: the first half is the Parry window, the second half is a plain Block. A Block reduces the damage and sends the document back to you.",
-  "block.practice": "As the opponent winds up, press and hold Space. Keep holding past the amber PARRY part into the blue BLOCK part until the toss hits.",
+    "When the opponent holds the document, they will toss it at you. Press Space to enter the Parry window. If you miss it, you enter an unavoidable cooldown; there is no ordinary Block window. A cooldown guard catches an attack but punishes the attacker more.",
+  "block.practice": "Press Space to enter Parry. If you miss the window, release or keep holding: the cooldown cannot be canceled. Whenever a Parry ends on its own, release Space and press again to start a new one.",
   "block.success": "Blocked! You took reduced damage and the document is yours.",
   "parry.title": "Parry",
   "parry.explain":
     "Press Space just before the toss arrives and it lands in the Parry window, the first part of your guard. A Parry cancels all damage, bounces the document back, and punishes the attacker harder. The game slows down here so you can learn the timing.",
   "parry.practice": "The opponent winds up. Wait a moment, then press Space just before the toss arrives.",
-  "parry.success": "Perfect Parry! No damage, and the attacker was penalized.",
+  "parry.success": "Perfect Parry! The attack was stopped immediately and your defense ended.",
   "feint.title": "Feint",
   "feint.explain":
     "While you hold the document, press F to fake a toss. Nothing is thrown, but the defender may panic and raise their guard early, which spoils their timing.",
@@ -138,7 +139,7 @@ const ZH: Record<MessageKey, string> = {
   "start.desc.tutorial": "引导练习：学习投掷、防守、Parry 和假动作。教学中不会输。",
   "start.startMatch": "开始对战",
   "start.startTutorial": "开始教学",
-  "start.controls": "持有文件时：空格 = 投掷，F = 假动作。没有文件时：按住空格 = 防守，按住的前半段是 Parry 窗口。",
+  "start.controls": "持有文件时：空格 = 投掷，F = 假动作。没有文件��：按住空格 = 防守，按住���前半段是 Parry 窗口。",
   "start.recommended": "新手",
   "start.completed": "已完成",
   "start.firstTitle": "第一次来？",
@@ -158,6 +159,7 @@ const ZH: Record<MessageKey, string> = {
   "hud.heat": "HEAT",
   "bar.parry": "PARRY",
   "bar.block": "防守",
+  "bar.cooldown": "冷静期",
 
   "PARRY!": "弹反！",
   "Blocked (reduced)": "已防守（减伤）",
@@ -209,8 +211,8 @@ const ZH: Record<MessageKey, string> = {
   "toss.practice": "按空格投掷文件。",
   "toss.success": "命中！看看对手的数值条：SAN 下降，HEAT 上升。文件现在在他手上。",
   "block.title": "防守",
-  "block.explain": "对手持有文件时会向你投掷。按住空格进行防守。屏幕上的条显示你的防守状态：前半段是 Parry 窗口，后半段是普通防守。普通防守会减免伤害，并把文件送回你手里。",
-  "block.practice": "对手蓄力时，立刻按住空格。越过琥珀色的 PARRY 段，进入蓝色的防守段，一直按住直到被投掷命中。",
+  "block.explain": "对手持有文件时会向你投掷。按空格进入 Parry 窗口；如果错过窗口，就会进入无法主动退出的冷静期。冷静期可以挡住攻击，但会让进攻方承担更重的 SAN 惩罚。",
+  "block.practice": "按空格进入 Parry。错过窗口后会自动进入冷静期；松开空格也不能提前解除。Parry 每次自动结束后，必须松开并重新按下空格才能再次开启。",
   "block.success": "防守成功！你只受到了减免后的伤害，文件回到你手里。",
   "parry.title": "Parry（弹反）",
   "parry.explain": "在投掷到达前不久按下空格，投掷就会落在 Parry 窗口里，也就是防守的前半段。Parry 会完全抵消伤害、把文件弹回去，并对进攻方造成更重的惩罚。这里游戏会放慢，方便你掌握时机。",
@@ -225,10 +227,10 @@ const ZH: Record<MessageKey, string> = {
   "penalty.practice": "对手正在防守。仍然按空格投掷，并观察你自己的数值条。",
   "penalty.success": "被反制了！你的 SAN 下降、HEAT 上升。不要盲目向防守中的对手投掷。",
   "summary.title": "你已经准备好了",
-  "summary.explain": "总结：\n- 持有文件时按空格：投掷；没有文件时按住：防守。\n- 按住的前段是 Parry，后段是普通防守。\n- F 用假动作引诱对手防守。\n- 被对手防守成功会损失 SAN 并增加 HEAT。\n正式对战将从 Lv1 开始。",
+  "summary.explain": "总结：\n- 持有文件时按空格：投掷；没有文件时按空格：进入 Parry。\n- 错过 Parry 后会进入无法主动退出的冷静期。\n- F 用假动作引诱对手提前防守。\n- 被对手防守成功会损失 SAN 并增加 HEAT。\n正式对战将从 Lv1 开始。",
 
   "fail.notGuarding": "投掷命中时你没有在防守。请在投掷到达之前就开始按住空格。",
-  "fail.blockWasParry": "这次是 Parry，不是普通防守。请按住更久，进入条的蓝色部分。",
+  "fail.blockWasParry": "Parry 窗口已经结束，你进入了无法退出的冷静期。",
   "fail.parryTooEarly": "太早了：你已经超过了 Parry 窗口。请在对手蓄力时才按空格。",
   "fail.parryTooLate": "太晚了：你在投掷之后才按下。请在对手蓄力时立刻按空格。",
   "fail.generic": "没有成功，我们再试一次。",
