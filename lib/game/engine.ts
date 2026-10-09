@@ -16,6 +16,9 @@ import {
   BASE_HEAT_GAIN_RATIO,
   BLOCKED_ATTACKER_PENALTY,
   BASE_PARRY_WINDOW_MS,
+  COOLDOWN_HEAT_PENALTY,
+  COOLDOWN_SAN_MULTIPLIER,
+  DEFENSE_COOLDOWN_RATIO,
   DOUBLE_LOSS_HEAT_THRESHOLD,
   DOUBLE_LOSS_SAN_THRESHOLD,
   HITSTOP_MS,
@@ -41,6 +44,7 @@ function createFighter(id: PlayerId, abilities: Abilities, parryWindowMs: number
     heat: 0,
     abilities,
     parryWindowMs,
+    defenseResolution: null,
     isHoldingSpace: false,
     holdStartTime: null,
     phase: "idle",
@@ -225,23 +229,22 @@ export class GameEngine {
       if (f.cooldownUntil !== null && this.state.now >= f.cooldownUntil) {
         f.phase = "idle"
         f.cooldownUntil = null
+        f.defenseResolution = null
       }
       return
     }
     if (!f.isHoldingSpace || f.holdStartTime === null) return
     const elapsed = this.state.now - f.holdStartTime
     const parryWindow = this.parryWindowFor(id)
-    const maxHold = parryWindow * 2
     if (elapsed <= parryWindow) {
       f.phase = "parryWindow"
-    } else if (elapsed <= maxHold) {
-      f.phase = "defending"
     } else {
-      // Auto-cancel: held too long past the defense window.
+      // Missing the Parry window commits the player to a non-cancelable cooldown.
       f.isHoldingSpace = false
       f.phase = "cooldown"
-      f.cooldownUntil = this.state.now + parryWindow
-      f.holdStartTime = null
+      f.defenseResolution = null
+      f.cooldownUntil = this.state.now + parryWindow * DEFENSE_COOLDOWN_RATIO[this.config.difficulty]
+      f.holdStartTime = this.state.now
     }
   }
 
@@ -260,8 +263,9 @@ export class GameEngine {
       return
     }
 
-    // Defender role: begin a hold. Blocked while cooling down from a prior over-hold.
+    // Defender role: begin a Parry hold. Cooldown cannot be interrupted or restarted.
     if (f.phase === "cooldown") return
+    f.defenseResolution = null
     f.isHoldingSpace = true
     f.holdStartTime = this.state.now
     f.phase = "parryWindow"
@@ -274,8 +278,10 @@ export class GameEngine {
     f.hasAttackedThisPress = false
     if (f.isHoldingSpace) {
       f.isHoldingSpace = false
-      if (f.phase !== "cooldown") f.phase = "idle"
-      f.holdStartTime = null
+      if (f.phase !== "cooldown") {
+        f.phase = "idle"
+        f.holdStartTime = null
+      }
       this.emit()
     }
   }
@@ -337,23 +343,36 @@ export class GameEngine {
       defender.lastActionAt = this.state.now
       attacker.lastActionLabel = null
       this.penalizeBlockedAttacker(attacker, "parry")
+      defender.phase = "idle"
+      defender.isHoldingSpace = false
+      defender.holdStartTime = null
+      defender.cooldownUntil = null
+      defender.defenseResolution = "parry"
       this.pushLog("Parry! Document bounced back", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
-    } else if (defender.phase === "defending") {
-      const dmg = this.computeDamage(attacker, defender, true)
-      defender.san = Math.max(0, defender.san - dmg.san)
-      defender.heat = Math.min(MAX_HEAT, defender.heat + dmg.heat)
-      defender.stats.sanLost += dmg.san
-      defender.stats.heatGained += dmg.heat
+    } else if (defender.phase === "cooldown") {
+      // A missed Parry still catches the attack during cooldown, but punishes the attacker harder.
+      const base = this.computeDamage(attacker, defender, false)
+      const sanPenalty = Math.min(attacker.san, Math.round(base.san * COOLDOWN_SAN_MULTIPLIER))
+      const heatPenalty = Math.min(MAX_HEAT - attacker.heat, COOLDOWN_HEAT_PENALTY)
+      attacker.san -= sanPenalty
+      attacker.heat += heatPenalty
+      attacker.stats.sanLost += sanPenalty
+      attacker.stats.heatGained += heatPenalty
       defender.stats.blocksLanded += 1
       defender.combo = 0
-      defender.lastActionLabel = "Blocked (reduced)"
+      defender.lastActionLabel = "Guarded in cooldown"
       defender.lastActionAt = this.state.now
-      this.state.documentOwner = defenderId
+      attacker.lastActionLabel = "Overcommitted!"
+      attacker.lastActionAt = this.state.now
+      defender.phase = "idle"
+      defender.isHoldingSpace = false
+      defender.holdStartTime = null
+      defender.cooldownUntil = null
+      defender.defenseResolution = "cooldown"
       this.pushDocumentEvent("block", attackerId, defenderId)
-      this.penalizeBlockedAttacker(attacker, "block")
-      this.pushLog("Blocked! Damage reduced, document transferred", defenderId)
+      this.pushLog("Cooldown guard! Attacker punished", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
       this.triggerHitstop()
     } else {
