@@ -19,7 +19,6 @@ import {
   COOLDOWN_HEAT_PENALTY,
   COOLDOWN_SAN_MULTIPLIER,
   DEFENSE_COOLDOWN_RATIO,
-  PARRY_RECOVERY_MS,
   DOUBLE_LOSS_HEAT_THRESHOLD,
   DOUBLE_LOSS_SAN_THRESHOLD,
   HITSTOP_MS,
@@ -49,9 +48,8 @@ function createFighter(id: PlayerId, abilities: Abilities, parryWindowMs: number
     isHoldingSpace: false,
     holdStartTime: null,
     phase: "idle",
-    cooldownUntil: null,
-    recoveryUntil: null,
-    combo: 0,
+  cooldownUntil: null,
+  combo: 0,
     isFeinting: false,
     feintCooldownUntil: null,
     feintVariant: null,
@@ -75,6 +73,8 @@ export class GameEngine {
   private aiNextDecisionAt = 0
   /** Tutorial-only: pins a fighter's defense phase so scripted counters are deterministic. */
   private scriptedPhase: Partial<Record<PlayerId, CombatPhase>> = {}
+  /** Set whenever a Parry ends on its own; Space must be released and pressed again before the next Parry. */
+  private needsRelease: Partial<Record<PlayerId, boolean>> = {}
 
   constructor(config: MatchConfig) {
     this.config = config
@@ -147,6 +147,7 @@ export class GameEngine {
   /** Restore full vitals and idle stances; optionally move the document to a given fighter. */
   tutorialResetRound(owner?: PlayerId) {
     this.scriptedPhase = {}
+    this.needsRelease = {}
     for (const f of Object.values(this.state.fighters)) {
       f.san = MAX_SAN
       f.heat = 0
@@ -154,7 +155,6 @@ export class GameEngine {
       f.isHoldingSpace = false
       f.holdStartTime = null
       f.cooldownUntil = null
-      f.recoveryUntil = null
       f.combo = 0
       f.isFeinting = false
       f.feintCooldownUntil = null
@@ -182,6 +182,7 @@ export class GameEngine {
     this.config = { ...this.config, ...config }
     this.aiNextDecisionAt = 0
     this.scriptedPhase = {}
+    this.needsRelease = {}
     this.state = this.buildInitialState()
     this.emit()
   }
@@ -228,14 +229,6 @@ export class GameEngine {
       f.phase = pinned
       return
     }
-    if (f.phase === "recovery") {
-      if (f.recoveryUntil !== null && this.state.now >= f.recoveryUntil) {
-        f.phase = "idle"
-        f.recoveryUntil = null
-        f.defenseResolution = null
-      }
-      return
-    }
     if (f.phase === "cooldown") {
       if (f.cooldownUntil !== null && this.state.now >= f.cooldownUntil) {
         f.phase = "idle"
@@ -252,6 +245,7 @@ export class GameEngine {
     } else {
       // Missing the Parry window commits the player to a non-cancelable cooldown.
       f.isHoldingSpace = false
+      this.needsRelease[id] = true
       f.phase = "cooldown"
       f.defenseResolution = null
       f.cooldownUntil = this.state.now + parryWindow * DEFENSE_COOLDOWN_RATIO[this.config.difficulty]
@@ -274,8 +268,8 @@ export class GameEngine {
       return
     }
 
-    // Defender role: begin a Parry hold. Cooldown cannot be interrupted or restarted.
-    if (f.phase === "cooldown" || f.phase === "recovery") return
+    // Defender role: begin a Parry hold. Cooldown cannot be interrupted, and an auto-ended Parry needs a fresh press.
+    if (f.phase === "cooldown" || this.needsRelease[id]) return
     f.defenseResolution = null
     f.isHoldingSpace = true
     f.holdStartTime = this.state.now
@@ -287,6 +281,7 @@ export class GameEngine {
   handleSpaceUp(id: PlayerId) {
     const f = this.state.fighters[id]
     f.hasAttackedThisPress = false
+    this.needsRelease[id] = false
     if (f.isHoldingSpace) {
       f.isHoldingSpace = false
       if (f.phase !== "cooldown") {
@@ -354,13 +349,11 @@ export class GameEngine {
       defender.lastActionAt = this.state.now
       attacker.lastActionLabel = null
       this.penalizeBlockedAttacker(attacker, "parry")
-      defender.phase = PARRY_RECOVERY_MS[this.config.difficulty] > 0 ? "recovery" : "idle"
+      defender.phase = "idle"
       defender.isHoldingSpace = false
-      defender.holdStartTime = PARRY_RECOVERY_MS[this.config.difficulty] > 0 ? this.state.now : null
+      defender.holdStartTime = null
       defender.cooldownUntil = null
-      defender.recoveryUntil = PARRY_RECOVERY_MS[this.config.difficulty] > 0
-        ? this.state.now + PARRY_RECOVERY_MS[this.config.difficulty]
-        : null
+      this.needsRelease[defenderId] = true
       defender.defenseResolution = "parry"
       this.pushLog("Parry! Document bounced back", defenderId)
       this.aiNextDecisionAt = this.state.now + 280 + Math.random() * 260
@@ -384,6 +377,7 @@ export class GameEngine {
       defender.isHoldingSpace = false
       defender.holdStartTime = null
       defender.cooldownUntil = null
+      this.needsRelease[defenderId] = true
       defender.defenseResolution = "cooldown"
       this.pushDocumentEvent("block", attackerId, defenderId)
       this.pushLog("Cooldown guard! Attacker punished", defenderId)

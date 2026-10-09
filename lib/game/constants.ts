@@ -30,13 +30,6 @@ export const COOLDOWN_SAN_MULTIPLIER = 1.5
 
 export const COOLDOWN_HEAT_PENALTY = 3
 
-/** Lv3 only: a successful Parry briefly prevents an immediate re-Parry. */
-export const PARRY_RECOVERY_MS: Record<AIDifficulty, number> = {
-  1: 0,
-  2: 0,
-  3: 400,
-}
-
 export const BASE_ATTACK_DAMAGE = 12
 export const BASE_HEAT_GAIN_RATIO = 0.65
 

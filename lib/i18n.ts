@@ -36,7 +36,6 @@ const EN = {
   "bar.parry": "PARRY",
   "bar.block": "BLOCK",
   "bar.cooldown": "COOLDOWN",
-  "bar.recovery": "RECOVERY",
 
   // Action labels coming from the engine
   "PARRY!": "PARRY!",
@@ -99,7 +98,7 @@ const EN = {
   "block.title": "Block",
   "block.explain":
     "When the opponent holds the document, they will toss it at you. Press Space to enter the Parry window. If you miss it, you enter an unavoidable cooldown; there is no ordinary Block window. A cooldown guard catches an attack but punishes the attacker more.",
-  "block.practice": "Press Space to enter Parry. If you miss the window, release or keep holding: the cooldown cannot be canceled.",
+  "block.practice": "Press Space to enter Parry. If you miss the window, release or keep holding: the cooldown cannot be canceled. Whenever a Parry ends on its own, release Space and press again to start a new one.",
   "block.success": "Blocked! You took reduced damage and the document is yours.",
   "parry.title": "Parry",
   "parry.explain":
@@ -140,7 +139,7 @@ const ZH: Record<MessageKey, string> = {
   "start.desc.tutorial": "引导练习：学习投掷、防守、Parry 和假动作。教学中不会输。",
   "start.startMatch": "开始对战",
   "start.startTutorial": "开始教学",
-  "start.controls": "持有文件时：空格 = 投掷，F = 假动作。没有文件时：按住空格 = 防守，按住���前半段是 Parry 窗口。",
+  "start.controls": "持有文件时：空格 = 投掷，F = 假动作。没有文件��：按住空格 = 防守，按住���前半段是 Parry 窗口。",
   "start.recommended": "新手",
   "start.completed": "已完成",
   "start.firstTitle": "第一次来？",
@@ -161,7 +160,6 @@ const ZH: Record<MessageKey, string> = {
   "bar.parry": "PARRY",
   "bar.block": "防守",
   "bar.cooldown": "冷静期",
-  "bar.recovery": "恢复期",
 
   "PARRY!": "弹反！",
   "Blocked (reduced)": "已防守（减伤）",
@@ -214,7 +212,7 @@ const ZH: Record<MessageKey, string> = {
   "toss.success": "命中！看看对手的数值条：SAN 下降，HEAT 上升。文件现在在他手上。",
   "block.title": "防守",
   "block.explain": "对手持有文件时会向你投掷。按空格进入 Parry 窗口；如果错过窗口，就会进入无法主动退出的冷静期。冷静期可以挡住攻击，但会让进攻方承担更重的 SAN 惩罚。",
-  "block.practice": "按空格进入 Parry。错过窗口后会自动进入冷静期；松开空格也不能提前解除。",
+  "block.practice": "按空格进入 Parry。错过窗口后会自动进入冷静期；松开空格也不能提前解除。Parry 每次自动结束后，必须松开并重新按下空格才能再次开启。",
   "block.success": "防守成功！你只受到了减免后的伤害，文件回到你手里。",
   "parry.title": "Parry（弹反）",
   "parry.explain": "在投掷到达前不久按下空格，投掷就会落在 Parry 窗口里，也就是防守的前半段。Parry 会完全抵消伤害、把文件弹回去，并对进攻方造成更重的惩罚。这里游戏会放慢，方便你掌握时机。",
