@@ -6,6 +6,7 @@ import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { OfficeSceneContents } from "@/components/game/office-scene"
 import { SanityVignette } from "@/components/game/sanity-vignette"
+import { CooldownVignette } from "@/components/game/cooldown-vignette"
 import { GameHud } from "@/components/game/hud"
 import { TutorialPanel } from "@/components/game/tutorial-panel"
 import { useGameEngine } from "@/hooks/use-game-engine"
@@ -100,6 +101,7 @@ export default function Page() {
       </Canvas>
 
       {state.isRunning && <SanityVignette san={state.fighters.player.san} />}
+      <CooldownVignette active={state.isRunning && state.fighters.player.phase === "cooldown"} />
 
       {!showStartScreen && (
         <GameHud
