@@ -20,6 +20,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   { id: "toss", practice: true, highlight: ["hint"], keys: [{ key: "Space", mode: "press" }] },
   { id: "block", practice: true, highlight: ["defense-bar"], keys: [{ key: "Space", mode: "hold" }] },
   { id: "parry", practice: true, highlight: ["defense-bar"], keys: [{ key: "Space", mode: "press" }], timeScale: 0.35 },
+  { id: "cooldown", practice: false, highlight: ["defense-bar", "hint"] },
   { id: "feint", practice: true, highlight: ["hint"], keys: [{ key: "F", mode: "press" }] },
   { id: "penalty", practice: true, highlight: ["player-bars"], keys: [{ key: "Space", mode: "press" }] },
   { id: "summary", practice: false, highlight: [] },
