@@ -20,9 +20,9 @@ export const TAP_GUARD_MS = 60
 
 /** After Parry expires, the defender is committed for this fraction of the Parry window. */
 export const DEFENSE_COOLDOWN_RATIO: Record<AIDifficulty, number> = {
-  1: 0.5,
-  2: 0.5,
-  3: 1,
+  1: 0.8,
+  2: 0.8,
+  3: 1.4,
 }
 
 /** An attack caught during cooldown is punished at 1.5x its undefended SAN damage. */
